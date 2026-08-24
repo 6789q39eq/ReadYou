@@ -1,7 +1,7 @@
 {
   "name": "ReadYou",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
-  "onCreateCommand": "pipx install mcp-server-fetch && pipx install duckduckgo-mcp-server",
+  "onCreateCommand": "sudo apk add --no-cache py3-pip || sudo apt-get update && sudo apt-get install -y python3-pip; python3 -m pip install --user --break-system-packages --quiet pipx && python3 -m pipx ensurepath && python3 -m pipx install mcp-server-fetch duckduckgo-mcp-server",
   "customizations": {
     "vscode": {
       "extensions": [

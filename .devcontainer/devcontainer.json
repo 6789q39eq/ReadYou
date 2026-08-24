@@ -1,0 +1,12 @@
+{
+  "name": "ReadYou",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
+  "onCreateCommand": "pipx install mcp-server-fetch && pipx install duckduckgo-mcp-server",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "github.vscode-pull-request-github"
+      ]
+    }
+  }
+}

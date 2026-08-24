@@ -1,0 +1,15 @@
+{
+  "servers": {
+    "fetch": {
+      "type": "stdio",
+      "command": "pipx",
+      "args": ["run", "mcp-server-fetch"]
+    },
+    "web-search": {
+      "type": "stdio",
+      "command": "pipx",
+      "args": ["run", "duckduckgo-mcp-server"],
+      "env": {}
+    }
+  }
+}

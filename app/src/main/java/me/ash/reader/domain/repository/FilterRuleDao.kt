@@ -48,6 +48,23 @@ interface FilterRuleDao {
     )
     suspend fun findEnabledByFeed(feedId: String): List<FilterRule>
 
+    /**
+     * Enabled rules applicable to one feed in evaluation order:
+     * global rules (feedId IS NULL) first, then feed-specific rules.
+     */
+    @Query(
+        """
+        SELECT * FROM filter_rule
+        WHERE accountId = :accountId AND isEnabled = 1
+          AND (feedId IS NULL OR feedId = :feedId)
+        ORDER BY createdAt ASC
+        """
+    )
+    suspend fun findEnabledForAccountAndFeed(
+        accountId: Int,
+        feedId: String,
+    ): List<FilterRule>
+
     @Query("SELECT * FROM filter_rule WHERE id = :id")
     suspend fun findById(id: String): FilterRule?
 

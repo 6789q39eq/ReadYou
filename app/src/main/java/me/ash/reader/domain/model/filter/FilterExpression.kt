@@ -39,7 +39,13 @@ sealed class FilterExpression {
     @SerialName("any_of")
     data class AnyOf(val children: List<FilterExpression>) : FilterExpression()
 
-    /** NOT of all children (true when none match). */
+    /**
+     * NOR of all children: true only when *none* of the children match.
+     *
+     * Note this is group negation, not unary NOT. The rule editor should
+     * either restrict [NoneOf] to a single child or label multi-child
+     * groups explicitly as "none of" to avoid user confusion.
+     */
     @Serializable
     @SerialName("none_of")
     data class NoneOf(val children: List<FilterExpression>) : FilterExpression()

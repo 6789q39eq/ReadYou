@@ -138,6 +138,18 @@ object ArticleFilterEngine {
 with `ArticleSnapshot(title, author, link, content)` extracted from `Article`
 so the engine is unit-testable on the JVM without Android.
 
+The DAO exposes a combined query used by the sync hook so the use-case needs a
+single call per feed batch:
+
+```sql
+SELECT * FROM filter_rule
+WHERE accountId = :accountId AND isEnabled = 1
+  AND (feedId IS NULL OR feedId = :feedId)
+ORDER BY createdAt ASC   -- global rules first, then feed-specific
+```
+
+(`FilterRuleDao.findEnabledForAccountAndFeed`.)
+
 ### 2.4 Sync integration (minimal diff)
 
 Single insertion point in `LocalRssService.syncFeed()`:
@@ -186,8 +198,11 @@ already provides.
    `[Field ▾] [contains ▾] [____] [×]`, "+ Add condition" button.
    Conditions in simple mode are OR'd within Block rules, AND'd within Allow
    rules (documented in-page) — matches what most users mean.
-3. Advanced mode toggle: reveals the grouping editor (AND/OR/NOT groups,
+3. Advanced mode toggle: reveals the grouping editor (AND/OR/NONE-OF groups,
    max depth 3) rendered as indented card groups with a group-operator chip.
+   `NONE_OF` is *group negation* (NOR): the editor must either restrict it to a
+   single child or label multi-child groups explicitly as "none of" — plain
+   "NOT" labeling would mislead users.
 4. Live validation: regex compile errors shown inline under the pattern field;
    a "Test" affordance lets the user paste a sample title/content and see
    match/no-match instantly (reuses `ArticleFilterEngine`).
@@ -199,12 +214,14 @@ MissingTranslation, and maintainers' Weblate flow picks translations later.
 
 ### 2.6 Testing
 
-- JVM unit tests (existing `app/src/test` convention, JUnit + mockito-jupiter):
+- JVM unit tests (existing `app/src/test` convention: JUnit 4 + Mockito runner):
+  - `FilterExpressionSerializationTest` — JSON round-trip, simple-mode
+    OR-for-BLOCK / AND-for-ALLOW semantics, corrupt-payload degradation to null,
+    unknown-field forward compatibility, unknown-enum safe degradation.
+    *(Landed with commit 1.)*
   - `ArticleFilterEngineTest` — boolean semantics, precedence (block > allow),
     word-boundary vs contains, case sensitivity, invalid-regex resilience,
-    deep-group evaluation.
-  - `FilterExpressionSerializationTest` — round-trip JSON, forward-compat
-    (unknown enum values degrade safely).
+    deep-group evaluation. *(Commit 2.)*
 - Robolectric-free; engine is pure Kotlin so tests run fast in CI.
 
 ### 2.7 Maintainability / merge-friendliness strategy
@@ -234,7 +251,7 @@ The constraint "easy to maintain even if upstream doesn't merge the PR" drives:
 
 | # | Commit | Contents |
 |---|---|---|
-| 1 | `feat(filter): data model & storage` | enums, `FilterExpression` + serializer, `FilterRule` entity, `FilterRuleDao`, DB v8 migration, DI wiring |
+| 1 | `feat(filter): data model & storage` | enums, `FilterExpression` + serializer, `FilterRule` entity, `FilterRuleDao` (incl. combined `findEnabledForAccountAndFeed` query), DB v8 migration, schema export, DI wiring, serialization round-trip tests ✅ *done* |
 | 2 | `feat(filter): evaluation engine` | `ArticleFilterEngine` + `ArticleSnapshot`, unit tests |
 | 3 | `feat(filter): sync pipeline hook` | `ApplyFeedFiltersUseCase`, wire into Local/GoogleReader/Fever ingest paths |
 | 4 | `feat(filter): rule management UI` | `FiltersPage`, `FilterRuleViewModel`, compact navigation |

@@ -59,6 +59,24 @@ fun FilterRuleEditPage(
     onBack: () -> Unit,
     viewModel: FilterRuleViewModel = hiltViewModel(),
 ) {
+    FilterRuleEditContent(
+        viewModel = viewModel,
+        isTwoPane = false,
+        onBack = onBack,
+    )
+}
+
+/**
+ * The editor itself, shared by the compact page and the detail pane of
+ * [FiltersListDetailPage].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FilterRuleEditContent(
+    viewModel: FilterRuleViewModel,
+    isTwoPane: Boolean,
+    onBack: () -> Unit,
+) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showTestDialog by remember { mutableStateOf(false) }
 

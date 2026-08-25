@@ -49,8 +49,34 @@ fun FiltersPage(
     navigateToEditRule: (String?) -> Unit,
     viewModel: FilterRuleViewModel = hiltViewModel(),
 ) {
-    val rules by viewModel.rules.collectAsStateWithLifecycle()
     var deleteCandidate by remember { mutableStateOf<FilterRule?>(null) }
+
+    FiltersListContent(
+        viewModel = viewModel,
+        isTwoPane = false,
+        onBack = onBack,
+        navigateToEditRule = navigateToEditRule,
+        onDeleteRequest = { deleteCandidate = it },
+        deleteCandidate = deleteCandidate,
+        onDismissDelete = { deleteCandidate = null },
+    )
+}
+
+/**
+ * The rule list itself, shared by the compact page and the list pane of
+ * [FiltersListDetailPage].
+ */
+@Composable
+fun FiltersListContent(
+    viewModel: FilterRuleViewModel,
+    isTwoPane: Boolean,
+    onBack: () -> Unit,
+    navigateToEditRule: (String?) -> Unit,
+    deleteCandidate: FilterRule?,
+    onDismissDelete: () -> Unit,
+    onDeleteRequest: (FilterRule) -> Unit,
+) {
+    val rules by viewModel.rules.collectAsStateWithLifecycle()
 
     RYScaffold(
         containerColor =
@@ -105,7 +131,7 @@ fun FiltersPage(
                                     viewModel.startEditing(rule.id)
                                     navigateToEditRule(rule.id)
                                 },
-                                onDelete = { deleteCandidate = rule },
+                                onDelete = { onDeleteRequest(rule) },
                             )
                         }
                     }
@@ -125,7 +151,7 @@ fun FiltersPage(
                                     viewModel.startEditing(rule.id)
                                     navigateToEditRule(rule.id)
                                 },
-                                onDelete = { deleteCandidate = rule },
+                                onDelete = { onDeleteRequest(rule) },
                             )
                         }
                     }
@@ -144,19 +170,19 @@ fun FiltersPage(
     deleteCandidate?.let { rule ->
         RYDialog(
             visible = true,
-            onDismissRequest = { deleteCandidate = null },
+            onDismissRequest = onDismissDelete,
             title = { Text(text = stringResource(R.string.filter_rule_delete)) },
             text = { Text(text = stringResource(R.string.filter_rule_delete_confirm)) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(rule)
-                    deleteCandidate = null
+                    onDismissDelete()
                 }) {
                     Text(text = stringResource(R.string.delete))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { deleteCandidate = null }) {
+                TextButton(onClick = onDismissDelete) {
                     Text(text = stringResource(R.string.cancel))
                 }
             },

@@ -386,4 +386,36 @@
     <string name="parse_full_content_desc">Fetch full articles from webpages</string>
     <string name="enable">Enable</string>
     <string name="disable">Disable</string>
+
+    <!-- Filter rules -->
+    <string name="filter_rules">Filter rules</string>
+    <string name="filter_rules_desc">Block or allow incoming articles by keywords and regex</string>
+    <string name="filter_rule_global">Global rules</string>
+    <string name="filter_rule_global_desc">Apply to all feeds in this account</string>
+    <string name="filter_rule_feed">Feed rules</string>
+    <string name="filter_rule_feed_desc">Apply to a specific feed only</string>
+    <string name="filter_rule_add">Add rule</string>
+    <string name="filter_rule_name">Rule name</string>
+    <string name="filter_rule_action_block">Block</string>
+    <string name="filter_rule_action_block_desc">Drop matching articles at sync time</string>
+    <string name="filter_rule_action_allow">Allow-only</string>
+    <string name="filter_rule_action_allow_desc">Keep only articles matching allow rules</string>
+    <string name="filter_rule_delete">Delete rule</string>
+    <string name="filter_rule_delete_confirm">Delete this rule? Filtered articles are not recovered.</string>
+    <string name="filter_rule_empty">No filter rules yet. Add one to hide unwanted articles.</string>
+    <string name="filter_rule_condition_field">Field</string>
+    <string name="filter_rule_condition_match_type">Match type</string>
+    <string name="filter_rule_condition_pattern">Pattern</string>
+    <string name="filter_rule_add_condition">Add condition</string>
+    <string name="filter_rule_simple_mode_hint">Conditions are combined with OR for Block rules and AND for Allow-only rules.</string>
+    <string name="filter_field_title">Title</string>
+    <string name="filter_field_author">Author</string>
+    <string name="filter_field_url">URL</string>
+    <string name="filter_field_content">Content</string>
+    <string name="filter_match_type_contains">contains</string>
+    <string name="filter_match_type_not_contains">doesn\'t contain</string>
+    <string name="filter_match_type_word_match">whole word</string>
+    <string name="filter_match_type_regex">regex</string>
+    <string name="filter_match_type_not_regex">not regex</string>
+    <string name="filter_regex_invalid">Invalid regular expression</string>
 </resources>

@@ -42,6 +42,7 @@ constructor(
     private val workManager: WorkManager,
     private val accountService: AccountService,
     private val syncLogger: SyncLogger,
+    private val applyFeedFilters: ApplyFeedFiltersUseCase,
 ) :
     AbstractRssRepository(
         articleDao,
@@ -116,6 +117,7 @@ constructor(
 
     private suspend fun syncFeed(feed: Feed, preDate: Date = Date()): FeedWithArticle {
         val articles = rssHelper.queryRssXml(feed, "", preDate)
+            .let { applyFeedFilters(feed.accountId, feed.id, it) }
         if (feed.icon == null) {
             val iconLink = rssHelper.queryRssIconLink(feed.url)
             if (iconLink != null) {

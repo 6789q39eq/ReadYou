@@ -77,6 +77,7 @@ constructor(
     private val workManager: WorkManager,
     private val accountService: AccountService,
     private val syncLogger: SyncLogger,
+    private val applyFeedFilters: ApplyFeedFiltersUseCase,
 ) :
     AbstractRssRepository(
         articleDao,
@@ -598,6 +599,7 @@ constructor(
                     unreadIds = remoteUnreadIds.await(),
                     starredIds = remoteStarredIds.await(),
                 )
+                    .let { applyFeedFilters(accountId, feedId, it) }
 
             if (feed.isNotification) {
                 val articlesToNotify = items.fastFilter { it.isUnread }

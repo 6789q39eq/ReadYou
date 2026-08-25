@@ -52,6 +52,7 @@ constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     workManager: WorkManager,
     private val accountService: AccountService,
+    private val applyFeedFilters: ApplyFeedFiltersUseCase,
 ) :
     AbstractRssRepository(
         articleDao,
@@ -248,6 +249,13 @@ constructor(
                             isStarred = (item.is_saved ?: 0) > 0,
                             updateAt = preDate,
                         )
+                    }.let { articles ->
+                        // A batch may mix feeds; apply per-feed rules per group.
+                        articles
+                            .groupBy { it.feedId }
+                            .flatMap { (feedId, feedArticles) ->
+                                applyFeedFilters(accountId, feedId, feedArticles)
+                            }
                     }
 
                 allArticles.addAll(articlesFromBatch)

@@ -9,9 +9,6 @@
       ]
     }
   },
-  "containerEnv": {
-    "PINNED_MODEL": "stealth/ox-alpha,z-ai/glm-5.2:free,minimax/minimax-m3:free"
-  },
   "remoteEnv": {
     "OPENROUTER_API_KEY": "${localEnv:OPENROUTER_API_KEY}"
   }

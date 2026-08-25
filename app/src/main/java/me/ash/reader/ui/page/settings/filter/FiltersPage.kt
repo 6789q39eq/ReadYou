@@ -44,9 +44,12 @@ import me.ash.reader.ui.theme.palette.onLight
  * the current account and opens the editor dialog/screen per rule.
  */
 @Composable
-fun FiltersPage(onBack: () -> Unit, viewModel: FilterRuleViewModel = hiltViewModel()) {
+fun FiltersPage(
+    onBack: () -> Unit,
+    navigateToEditRule: (String?) -> Unit,
+    viewModel: FilterRuleViewModel = hiltViewModel(),
+) {
     val rules by viewModel.rules.collectAsStateWithLifecycle()
-    var editingRuleId by remember { mutableStateOf<String?>(null) }
     var deleteCandidate by remember { mutableStateOf<FilterRule?>(null) }
 
     RYScaffold(
@@ -66,8 +69,8 @@ fun FiltersPage(onBack: () -> Unit, viewModel: FilterRuleViewModel = hiltViewMod
                 contentDescription = stringResource(R.string.filter_rule_add),
                 tint = MaterialTheme.colorScheme.onSurface,
             ) {
-                editingRuleId = null
                 viewModel.startEditing(null)
+                navigateToEditRule(null)
             }
         },
         content = {
@@ -99,8 +102,8 @@ fun FiltersPage(onBack: () -> Unit, viewModel: FilterRuleViewModel = hiltViewMod
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },
                                 onEdit = {
-                                    editingRuleId = rule.id
                                     viewModel.startEditing(rule.id)
+                                    navigateToEditRule(rule.id)
                                 },
                                 onDelete = { deleteCandidate = rule },
                             )
@@ -119,8 +122,8 @@ fun FiltersPage(onBack: () -> Unit, viewModel: FilterRuleViewModel = hiltViewMod
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },
                                 onEdit = {
-                                    editingRuleId = rule.id
                                     viewModel.startEditing(rule.id)
+                                    navigateToEditRule(rule.id)
                                 },
                                 onDelete = { deleteCandidate = rule },
                             )

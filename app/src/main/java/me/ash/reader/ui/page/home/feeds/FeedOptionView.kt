@@ -197,8 +197,6 @@ private fun Preset(
                     unsubscribeOnClick()
                 }
             }
-        }
-        if (notSubscribeMode) {
             RYSelectionChip(
                 modifier = Modifier,
                 content = stringResource(R.string.filter_rules),

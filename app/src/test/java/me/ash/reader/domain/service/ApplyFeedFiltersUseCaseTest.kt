@@ -11,6 +11,7 @@ import me.ash.reader.domain.model.filter.FilterRule
 import me.ash.reader.domain.model.filter.toJson
 import me.ash.reader.domain.repository.FilterRuleDao
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.Mockito
@@ -102,5 +103,47 @@ class ApplyFeedFiltersUseCaseTest {
             .thenThrow(RuntimeException("db"))
         val input = listOf(article("keep me"))
         assertEquals(input, useCase(1, "feed-1", input))
+    }
+
+    @Test
+    fun `pathological regex times out and article is kept`() = runBlocking {
+        // Construct a pattern that catastrophically backtracks on a long title.
+        val slowPattern = "a".repeat(30) + "!"
+        val pattern = "(a+)+b"
+        val article =
+            article(
+                title = slowPattern,
+                id = "slow",
+            )
+        val slowRule =
+            FilterRule(
+                id = "slow",
+                accountId = 1,
+                feedId = null,
+                name = "slow",
+                action = FilterAction.BLOCK,
+                expressionJson =
+                    FilterExpression.Condition(
+                        FilterCondition(
+                            field = FilterField.TITLE,
+                            matchType = FilterMatchType.REGEX,
+                            pattern = pattern,
+                        )
+                    ).toJson(),
+                createdAt = 0,
+            )
+        Mockito.`when`(dao.findEnabledForAccountAndFeed(any(), any()))
+            .thenReturn(listOf(slowRule))
+        val start = System.currentTimeMillis()
+        val result = useCase(1, "feed-1", listOf(article))
+        val elapsed = System.currentTimeMillis() - start
+        // The article must be kept (timeout treated as "no match") and the
+        // elapsed time must be bounded by the per-article budget plus a small
+        // fudge factor for coroutine scheduling.
+        assertEquals(listOf(article), result)
+        assertTrue(
+            "expected elapsed < ${ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 4}ms but was ${elapsed}ms",
+            elapsed < ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 4,
+        )
     }
 }

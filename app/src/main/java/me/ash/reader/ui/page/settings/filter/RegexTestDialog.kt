@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import me.ash.reader.R
+import me.ash.reader.domain.model.filter.FilterAction
 import me.ash.reader.domain.model.filter.FilterCondition
 import me.ash.reader.domain.service.ArticleFilterEngine
 import me.ash.reader.domain.service.ArticleSnapshot
@@ -24,35 +25,41 @@ import me.ash.reader.ui.component.base.RYDialog
 
 /**
  * Live "try your pattern" box: paste a sample title/content and instantly see
- * whether the current conditions would match it (reuses [ArticleFilterEngine]).
+ * whether the current conditions would match it. The summary line shows how
+ * the per-condition results combine under the rule's [action] (OR for Block,
+ * AND for Allow-only) so the dialog agrees with the engine's evaluation.
  */
 @Composable
 fun RegexTestDialog(
+    action: FilterAction,
     conditions: List<EditableCondition>,
     onDismiss: () -> Unit,
 ) {
     var sample by remember { mutableStateOf("") }
 
-    val matches =
+    val results: List<Pair<EditableCondition, Boolean>>? =
         if (sample.isBlank()) {
             null
         } else {
+            val snapshot =
+                ArticleSnapshot(
+                    title = sample,
+                    author = "",
+                    link = "",
+                    content = sample,
+                )
             conditions
                 .filter { it.pattern.isNotBlank() }
                 .map { condition ->
                     condition to
                         ArticleFilterEngine.matchesCondition(
-                            ArticleSnapshot(
-                                title = sample,
-                                author = "",
-                                link = "",
-                                content = sample,
-                            ),
-                            FilterCondition(
-                                field = condition.field,
-                                matchType = condition.matchType,
-                                pattern = condition.pattern.trim(),
-                            ),
+                            article = snapshot,
+                            condition =
+                                FilterCondition(
+                                    field = condition.field,
+                                    matchType = condition.matchType,
+                                    pattern = condition.pattern.trim(),
+                                ),
                         )
                 }
         }
@@ -71,16 +78,37 @@ fun RegexTestDialog(
                     minLines = 2,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
-                matches?.forEach { (condition, matched) ->
-                    Text(
-                        text =
-                            stringResource(R.string.filter_regex_test_result, matched.toBoolText()),
-                        color =
-                            if (matched) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.error,
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
+                results?.let { list ->
+                    if (list.isNotEmpty()) {
+                        val matchedCount = list.count { it.second }
+                        val summaryRes =
+                            when (action) {
+                                FilterAction.BLOCK -> R.string.filter_regex_test_summary_block
+                                FilterAction.ALLOW -> R.string.filter_regex_test_summary_allow
+                            }
+                        Text(
+                            text = stringResource(summaryRes, matchedCount, list.size),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        list.forEach { (condition, matched) ->
+                            Text(
+                                text =
+                                    "${condition.field.name} ${condition.matchType.name} " +
+                                        "\"${condition.pattern.trim()}\": " +
+                                        stringResource(
+                                            if (matched) R.string.filter_regex_test_yes
+                                            else R.string.filter_regex_test_no
+                                        ),
+                                color =
+                                    if (matched) MaterialTheme.colorScheme.primary
+                                    else MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                        }
+                    }
                 }
             }
         },
@@ -89,7 +117,3 @@ fun RegexTestDialog(
         },
     )
 }
-
-@Composable
-private fun Boolean.toBoolText(): String =
-    stringResource(if (this) R.string.enabled else R.string.disabled)

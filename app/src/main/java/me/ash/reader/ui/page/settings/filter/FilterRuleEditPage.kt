@@ -14,7 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.Science
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -31,6 +31,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,6 +39,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import kotlinx.coroutines.launch
 import me.ash.reader.R
 import me.ash.reader.domain.model.filter.FilterAction
 import me.ash.reader.domain.model.filter.FilterField
@@ -79,6 +81,7 @@ fun FilterRuleEditContent(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showTestDialog by remember { mutableStateOf(false) }
+    val coroutineScope = rememberCoroutineScope()
 
     RYScaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -92,7 +95,7 @@ fun FilterRuleEditContent(
         },
         actions = {
             FeedbackIconButton(
-                imageVector = Icons.Outlined.Science,
+                imageVector = Icons.Outlined.PlayArrow,
                 contentDescription = stringResource(R.string.filter_regex_test_title),
                 tint = MaterialTheme.colorScheme.onSurface,
             ) { showTestDialog = true }
@@ -108,7 +111,9 @@ fun FilterRuleEditContent(
                 Spacer(modifier = Modifier.height(8.dp))
                 TextButton(
                     onClick = {
-                        if (viewModel.save()) onBack()
+                        coroutineScope.launch {
+                            if (viewModel.save()) onBack()
+                        }
                     }
                 ) {
                     Text(text = stringResource(R.string.save))
@@ -165,6 +170,12 @@ fun FilterRuleEditContent(
                     modifier = Modifier.padding(horizontal = 20.dp),
                     style = MaterialTheme.typography.bodySmall,
                 )
+                if (state.isAdvancedRule) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    AdvancedRuleWarning(
+                        onDismiss = viewModel::acknowledgeAdvancedRuleWarning,
+                    )
+                }
                 Spacer(modifier = Modifier.height(16.dp))
 
                 Subtitle(
@@ -208,7 +219,11 @@ fun FilterRuleEditContent(
     )
 
     if (showTestDialog) {
-        RegexTestDialog(onDismiss = { showTestDialog = false }, conditions = state.conditions)
+        RegexTestDialog(
+            action = state.action,
+            conditions = state.conditions,
+            onDismiss = { showTestDialog = false },
+        )
     }
 }
 
@@ -258,12 +273,27 @@ private fun ConditionRow(
         }
         OutlinedTextField(
             value = condition.pattern,
-            onValueChange = onPatternChange,
+            onValueChange = { newValue ->
+                if (newValue.length <= ArticleFilterEngine.MAX_PATTERN_LENGTH) {
+                    onPatternChange(newValue)
+                }
+            },
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(text = stringResource(R.string.filter_rule_condition_pattern)) },
             isError = regexError != null,
-            supportingText = regexError?.let { error -> { Text(text = error) } },
+            supportingText = {
+                if (regexError != null) {
+                    Text(text = regexError)
+                } else if (condition.field == FilterField.URL &&
+                    condition.matchType == FilterMatchType.WORD_MATCH
+                ) {
+                    Text(
+                        text = stringResource(R.string.filter_word_match_url_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                    )
+                }
+            },
         )
     }
 }
@@ -351,4 +381,34 @@ private fun MatchTypeDropdown(
         },
         modifier = modifier,
     )
+}
+
+@Composable
+private fun AdvancedRuleWarning(onDismiss: () -> Unit) {
+    androidx.compose.material3.Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 4.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        contentColor = MaterialTheme.colorScheme.onErrorContainer,
+        shape = MaterialTheme.shapes.medium,
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = stringResource(R.string.filter_rule_advanced_warning_title),
+                style = MaterialTheme.typography.titleSmall,
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = stringResource(R.string.filter_rule_advanced_warning_body),
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = onDismiss) {
+                    Text(text = stringResource(R.string.filter_rule_advanced_warning_dismiss))
+                }
+            }
+        }
+    }
 }

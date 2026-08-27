@@ -1,7 +1,7 @@
 # Advanced Feed Filtering — Design & Implementation Plan
 
-> Status: Proposal · Target branch: `feature/advanced-filters` (stacked off `main`)
-> Author: contributor proposal, 2026-08
+> Status: Implemented · Branch: `main` (commits `e1528fa0` → `1ba823e3`)
+> Author: contributor proposal + implementation, 2026-08
 >
 > Goal: per-feed (and global) **allow / block filtering of incoming articles** using
 > keyword lists and boolean expressions with light regex support, in a UI that fits

@@ -9,6 +9,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.Article
 import androidx.compose.material.icons.outlined.Add
+import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material3.Icon
@@ -45,6 +46,7 @@ fun FeedOptionView(
     openInBrowserPresetOnClick: () -> Unit = {},
     clearArticlesOnClick: () -> Unit = {},
     unsubscribeOnClick: () -> Unit = {},
+    filterRulesOnClick: () -> Unit = {},
     onGroupClick: (groupId: String) -> Unit = {},
     onAddNewGroup: () -> Unit = {},
     onFeedUrlClick: () -> Unit = {},
@@ -66,6 +68,7 @@ fun FeedOptionView(
             openInBrowserPresetOnClick = openInBrowserPresetOnClick,
             clearArticlesOnClick = clearArticlesOnClick,
             unsubscribeOnClick = unsubscribeOnClick,
+            filterRulesOnClick = filterRulesOnClick,
         )
 
         if (showGroup) {
@@ -114,6 +117,7 @@ private fun Preset(
     openInBrowserPresetOnClick: () -> Unit = {},
     clearArticlesOnClick: () -> Unit = {},
     unsubscribeOnClick: () -> Unit = {},
+    filterRulesOnClick: () -> Unit = {},
 ) {
     Subtitle(text = stringResource(R.string.reading_page))
     Spacer(modifier = Modifier.height(10.dp))
@@ -192,6 +196,23 @@ private fun Preset(
                 ) {
                     unsubscribeOnClick()
                 }
+            }
+        }
+        if (notSubscribeMode) {
+            RYSelectionChip(
+                modifier = Modifier,
+                content = stringResource(R.string.filter_rules),
+                selected = false,
+                selectedIcon = {
+                    Icon(
+                        modifier = Modifier.padding(start = 8.dp).size(20.dp),
+                        imageVector = Icons.Outlined.FilterAlt,
+                        contentDescription = stringResource(R.string.filter_rules),
+                        tint = MaterialTheme.colorScheme.onSurface alwaysLight true,
+                    )
+                },
+            ) {
+                filterRulesOnClick()
             }
         }
     }

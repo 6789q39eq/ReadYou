@@ -100,6 +100,7 @@ fun FeedsPage(
     navigationToFlow: () -> Unit,
     navigateToAccountList: () -> Unit,
     navigateToAccountDetail: (Int) -> Unit,
+    navigateToFilterRules: ((feedId: String?) -> Unit)? = null,
 ) {
     var accountTabVisible by remember { mutableStateOf(false) }
 
@@ -353,7 +354,10 @@ fun FeedsPage(
     SubscribeDialog(subscribeViewModel = subscribeViewModel)
 
     GroupOptionDrawer(drawerState = groupDrawerState)
-    FeedOptionDrawer(drawerState = feedDrawerState)
+    FeedOptionDrawer(
+        drawerState = feedDrawerState,
+        onNavigateToFilterRules = navigateToFilterRules,
+    )
 
     val currentAccountId = feedsUiState.account?.id
 

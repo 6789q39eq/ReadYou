@@ -45,8 +45,7 @@ fun FiltersListDetailPage(
                     navigateToEditRule = { ruleId ->
                         viewModel.startEditing(ruleId)
                         navigateToDetail(FilterEditData(ruleId))
-                    },
-                    deleteCandidate = deleteCandidate,
+                    },                    deleteCandidate = deleteCandidate,
                     onDismissDelete = { deleteCandidate = null },
                     onDeleteRequest = { deleteCandidate = it },
                 )

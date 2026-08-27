@@ -47,6 +47,7 @@ import me.ash.reader.ui.page.home.feeds.FeedOptionView
 fun FeedOptionDrawer(
     drawerState: ModalBottomSheetState = rememberModalBottomSheetState(initialValue = ModalBottomSheetValue.Hidden),
     feedOptionViewModel: FeedOptionViewModel = hiltViewModel(),
+    onNavigateToFilterRules: ((feedId: String?) -> Unit)? = null,
     content: @Composable () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -118,6 +119,10 @@ fun FeedOptionDrawer(
                     },
                     unsubscribeOnClick = {
                         feedOptionViewModel.showDeleteDialog()
+                    },
+                    filterRulesOnClick = {
+                        scope.launch { drawerState.hide() }
+                        onNavigateToFilterRules?.invoke(feed?.id)
                     },
                     onGroupClick = {
                         feedOptionViewModel.selectedGroup(it)

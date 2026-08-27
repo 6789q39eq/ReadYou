@@ -135,6 +135,9 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 navigateToAccountDetail = {
                                     backStack.add(Route.AccountDetails(it))
                                 },
+                                navigateToFilterRules = { feedId ->
+                                    backStack.add(Route.FilterEdit(null, feedId))
+                                },
                             )
                         }
                     }
@@ -290,7 +293,7 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                             val filterViewModel = hiltViewModel<FilterRuleViewModel>()
 
                             LaunchedEffect(key) {
-                                filterViewModel.startEditing(key.ruleId)
+                                filterViewModel.startEditing(key.ruleId, key.feedId)
                             }
 
                             FiltersListDetailPage(

@@ -43,12 +43,13 @@ constructor(
         filterRuleDao.observeByAccount(accountService.getCurrentAccountId())
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun startEditing(ruleId: String?) {
+    fun startEditing(ruleId: String?, feedId: String? = null) {
         viewModelScope.launch(ioDispatcher) {
             if (ruleId == null) {
                 _uiState.update {
                     FilterRuleUiState(
                         editingRuleId = null,
+                        feedId = feedId,
                         name = "",
                         action = FilterAction.BLOCK,
                         conditions =

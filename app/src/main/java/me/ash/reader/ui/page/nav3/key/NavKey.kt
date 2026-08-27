@@ -58,8 +58,9 @@ sealed interface Route : NavKey {
     // Filter rules
     @Serializable data object Filters : Route
 
-    /** [ruleId] is null when creating a new rule. */
-    @Serializable data class FilterEdit(val ruleId: String? = null) : Route
+    /** [ruleId] is null when creating a new rule; [feedId] scopes a new rule to a feed. */
+    @Serializable data class FilterEdit(val ruleId: String? = null, val feedId: String? = null) :
+        Route
 
     // Languages
     @Serializable data object Languages : Route

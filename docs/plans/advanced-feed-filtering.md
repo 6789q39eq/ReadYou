@@ -252,12 +252,12 @@ The constraint "easy to maintain even if upstream doesn't merge the PR" drives:
 | # | Commit | Contents |
 |---|---|---|
 | 1 | `feat(filter): data model & storage` | enums, `FilterExpression` + serializer, `FilterRule` entity, `FilterRuleDao` (incl. combined `findEnabledForAccountAndFeed` query), DB v8 migration, schema export, DI wiring, serialization round-trip tests ✅ *done* |
-| 2 | `feat(filter): evaluation engine` | `ArticleFilterEngine` + `ArticleSnapshot`, unit tests |
-| 3 | `feat(filter): sync pipeline hook` | `ApplyFeedFiltersUseCase`, wire into Local/GoogleReader/Fever ingest paths |
-| 4 | `feat(filter): rule management UI` | `FiltersPage`, `FilterRuleViewModel`, compact navigation |
-| 5 | `feat(filter): rule editor UI` | condition rows, expression editor, regex validation/test dialog |
-| 6 | `feat(filter): large-screen layout` | list-detail scaffold for expanded widths |
-| 7 | `feat(filter): feed drawer entry point` | "Filter rules…" row in `FeedOptionDrawer`; docs |
+| 2 | `feat(filter): evaluation engine` | `ArticleFilterEngine` + `ArticleSnapshot`, unit tests ✅ *done* |
+| 3 | `feat(filter): sync pipeline hook` | `ApplyFeedFiltersUseCase`, wire into Local/GoogleReader/Fever ingest paths ✅ *done* |
+| 4 | `feat(filter): rule management UI` | `FiltersPage`, `FilterRuleViewModel`, compact navigation ✅ *done* |
+| 5 | `feat(filter): rule editor UI` | condition rows, expression editor, regex validation/test dialog ✅ *done* |
+| 6 | `feat(filter): large-screen layout` | list-detail scaffold for expanded widths ✅ *done* |
+| 7 | `feat(filter): feed drawer entry point` | "Filter rules…" row in `FeedOptionDrawer`; docs ✅ *done* |
 
 Each commit builds and passes tests independently → easy partial review/upstreaming.
 

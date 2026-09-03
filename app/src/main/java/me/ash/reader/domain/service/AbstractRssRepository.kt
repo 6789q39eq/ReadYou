@@ -21,6 +21,7 @@ import me.ash.reader.domain.model.group.Group
 import me.ash.reader.domain.model.group.GroupWithFeed
 import me.ash.reader.domain.repository.ArticleDao
 import me.ash.reader.domain.repository.FeedDao
+import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.repository.GroupDao
 import me.ash.reader.infrastructure.android.NotificationHelper
 import me.ash.reader.infrastructure.preference.KeepArchivedPreference
@@ -39,6 +40,7 @@ abstract class AbstractRssRepository(
     private val dispatcherIO: CoroutineDispatcher,
     private val dispatcherDefault: CoroutineDispatcher,
     private val accountService: AccountService,
+    private val filterRuleDao: FilterRuleDao,
 ) {
 
     open val importSubscription: Boolean = true
@@ -353,6 +355,7 @@ abstract class AbstractRssRepository(
             return
         }
         deleteArticles(feed = feed, includeStarred = true)
+        filterRuleDao.deleteByFeed(feed.id)
         feedDao.delete(feed)
     }
 
@@ -380,6 +383,7 @@ abstract class AbstractRssRepository(
 
     suspend fun deleteAccountArticles(accountId: Int) {
         articleDao.deleteByAccountId(accountId)
+        filterRuleDao.deleteByAccount(accountId)
     }
 
     suspend fun groupParseFullContent(group: Group, isFullContent: Boolean) {

@@ -106,6 +106,37 @@ class ApplyFeedFiltersUseCaseTest {
     }
 
     @Test
+    fun `partition returns kept and dropped separately`() = runBlocking {
+        Mockito.`when`(dao.findEnabledForAccountAndFeed(any(), any()))
+            .thenReturn(listOf(rule(FilterAction.BLOCK, "spam")))
+        val input = listOf(article("buy spam now"), article("real news"))
+        val (kept, dropped) = useCase.partition(1, "feed-1", input)
+        assertEquals(listOf("real news"), kept.map { it.title })
+        assertEquals(listOf("buy spam now"), dropped.map { it.title })
+    }
+
+    @Test
+    fun `filterMixedFeeds applies per-feed rules and preserves order`() = runBlocking {
+        Mockito.`when`(dao.findEnabledForAccountAndFeed(any(), any()))
+            .thenAnswer { invocation ->
+                val feedId = invocation.getArgument(1, String::class.java)
+                if (feedId == "feed-1") listOf(rule(FilterAction.BLOCK, "spam")) else emptyList()
+            }
+        fun feedArticle(title: String, feedId: String) = article(title).copy(feedId = feedId)
+        val input =
+            listOf(
+                feedArticle("real news", "feed-1"),
+                feedArticle("buy spam now", "feed-1"),
+                feedArticle("buy spam now", "feed-2"),
+            )
+        val result = useCase.filterMixedFeeds(1, input)
+        assertEquals(
+            listOf("real news" to "feed-1", "buy spam now" to "feed-2"),
+            result.map { it.title to it.feedId },
+        )
+    }
+
+    @Test
     fun `pathological regex times out and article is kept`() = runBlocking {
         // Construct a pattern that catastrophically backtracks on a long title.
         val slowPattern = "a".repeat(30) + "!"
@@ -142,8 +173,8 @@ class ApplyFeedFiltersUseCaseTest {
         // fudge factor for coroutine scheduling.
         assertEquals(listOf(article), result)
         assertTrue(
-            "expected elapsed < ${ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 4}ms but was ${elapsed}ms",
-            elapsed < ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 4,
+            "expected elapsed < ${ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 10}ms but was ${elapsed}ms",
+            elapsed < ApplyFeedFiltersUseCase.PER_ARTICLE_TIMEOUT_MS * 10,
         )
     }
 }

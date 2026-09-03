@@ -36,16 +36,19 @@ fun RegexTestDialog(
     onDismiss: () -> Unit,
 ) {
     var sample by remember { mutableStateOf("") }
+    var authorSample by remember { mutableStateOf("") }
+    var linkSample by remember { mutableStateOf("") }
 
+    val hasSample = sample.isNotBlank() || authorSample.isNotBlank() || linkSample.isNotBlank()
     val results: List<Pair<EditableCondition, Boolean>>? =
-        if (sample.isBlank()) {
+        if (!hasSample) {
             null
         } else {
             val snapshot =
                 ArticleSnapshot(
                     title = sample,
-                    author = "",
-                    link = "",
+                    author = authorSample.ifBlank { null },
+                    link = linkSample,
                     content = sample,
                 )
             conditions
@@ -76,6 +79,22 @@ fun RegexTestDialog(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(text = stringResource(R.string.filter_regex_test_sample)) },
                     minLines = 2,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = authorSample,
+                    onValueChange = { authorSample = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(text = stringResource(R.string.filter_regex_test_author)) },
+                    singleLine = true,
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                OutlinedTextField(
+                    value = linkSample,
+                    onValueChange = { linkSample = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(text = stringResource(R.string.filter_regex_test_link)) },
+                    singleLine = true,
                 )
                 Spacer(modifier = Modifier.height(12.dp))
                 results?.let { list ->

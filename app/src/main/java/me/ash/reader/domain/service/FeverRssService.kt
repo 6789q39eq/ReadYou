@@ -23,6 +23,7 @@ import me.ash.reader.domain.model.feed.Feed
 import me.ash.reader.domain.model.group.Group
 import me.ash.reader.domain.repository.ArticleDao
 import me.ash.reader.domain.repository.FeedDao
+import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.repository.GroupDao
 import me.ash.reader.infrastructure.android.NotificationHelper
 import me.ash.reader.infrastructure.di.DefaultDispatcher
@@ -53,6 +54,7 @@ constructor(
     workManager: WorkManager,
     private val accountService: AccountService,
     private val applyFeedFilters: ApplyFeedFiltersUseCase,
+    private val filterRuleDao: FilterRuleDao,
 ) :
     AbstractRssRepository(
         articleDao,
@@ -64,6 +66,7 @@ constructor(
         ioDispatcher,
         defaultDispatcher,
         accountService,
+        filterRuleDao,
     ) {
 
     override val importSubscription: Boolean = false
@@ -250,12 +253,9 @@ constructor(
                             updateAt = preDate,
                         )
                     }.let { articles ->
-                        // A batch may mix feeds; apply per-feed rules per group.
-                        articles
-                            .groupBy { it.feedId }
-                            .flatMap { (feedId, feedArticles) ->
-                                applyFeedFilters(accountId, feedId, feedArticles)
-                            }
+                        // A batch may mix feeds; rules apply per feed, with the
+                        // original item order preserved.
+                        applyFeedFilters.filterMixedFeeds(accountId, articles) { it.feedId }
                     }
 
                 allArticles.addAll(articlesFromBatch)

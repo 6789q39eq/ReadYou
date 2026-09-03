@@ -36,6 +36,7 @@ import me.ash.reader.domain.model.feed.Feed
 import me.ash.reader.domain.model.group.Group
 import me.ash.reader.domain.repository.ArticleDao
 import me.ash.reader.domain.repository.FeedDao
+import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.repository.GroupDao
 import me.ash.reader.infrastructure.android.NotificationHelper
 import me.ash.reader.infrastructure.di.DefaultDispatcher
@@ -78,6 +79,7 @@ constructor(
     private val accountService: AccountService,
     private val syncLogger: SyncLogger,
     private val applyFeedFilters: ApplyFeedFiltersUseCase,
+    private val filterRuleDao: FilterRuleDao,
 ) :
     AbstractRssRepository(
         articleDao,
@@ -89,6 +91,7 @@ constructor(
         ioDispatcher,
         defaultDispatcher,
         accountService,
+        filterRuleDao,
     ) {
 
     override val importSubscription: Boolean = false
@@ -591,7 +594,7 @@ constructor(
 
             val toFetch = remoteAllIds.await() - localIds
 
-            val items =
+            val fetched =
                 fetchItemsContents(
                     itemIds = toFetch,
                     googleReaderAPI = googleReaderAPI,
@@ -599,7 +602,12 @@ constructor(
                     unreadIds = remoteUnreadIds.await(),
                     starredIds = remoteStarredIds.await(),
                 )
-                    .let { applyFeedFilters(accountId, feedId, it) }
+            // Dropped articles are stored as read: otherwise they would never
+            // enter localIds and would be re-fetched on every sync. Read items
+            // stay out of unread counts and notifications.
+            val (kept, dropped) = applyFeedFilters.partition(accountId, feedId, fetched)
+            val items = kept
+            val filteredIds = dropped.map { it.id.remoteId }.toSet()
 
             if (feed.isNotification) {
                 val articlesToNotify = items.fastFilter { it.isUnread }
@@ -623,7 +631,9 @@ constructor(
             }
 
             launch {
-                val toBeUnreadIds = localReadIds.intersect(remoteUnreadIds.await())
+                // Filtered-out items are kept read locally on purpose; never
+                // flip them back to unread during reconciliation.
+                val toBeUnreadIds = localReadIds.intersect(remoteUnreadIds.await()) - filteredIds
                 toBeUnreadIds
                     .map { it.dbId(accountId) }
                     .chunked(1000)
@@ -666,6 +676,9 @@ constructor(
             }
 
             articleDao.insert(*items.toTypedArray())
+            if (dropped.isNotEmpty()) {
+                articleDao.insert(*dropped.map { it.copy(isUnread = false) }.toTypedArray())
+            }
             Timber.i("onCompletion: ${System.currentTimeMillis() - preTime}")
 
             ListenableWorker.Result.success()

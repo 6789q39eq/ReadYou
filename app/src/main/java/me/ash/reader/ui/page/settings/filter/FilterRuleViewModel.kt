@@ -90,6 +90,8 @@ constructor(
                             conditions = conditions,
                             originalExpressionJson = rule.expressionJson,
                             isAdvancedRule = wasAdvanced,
+                            editingIsEnabled = rule.isEnabled,
+                            editingCreatedAt = rule.createdAt,
                         )
                     }
                 }
@@ -164,6 +166,10 @@ constructor(
                 }
         val expression = FilterExpression.simple(conditions, state.action) ?: return false
         val ruleId = state.editingRuleId ?: accountId.spacerDollar(UUID.randomUUID().toString())
+        // Preserve enablement and creation order when editing; new rules start
+        // enabled with the current timestamp.
+        val isEnabled = if (state.editingRuleId == null) true else state.editingIsEnabled
+        val createdAt = state.editingCreatedAt ?: System.currentTimeMillis()
 
         return withContext(ioDispatcher) {
             filterRuleDao.upsert(
@@ -172,10 +178,10 @@ constructor(
                     accountId = accountId,
                     feedId = state.feedId,
                     name = name,
-                    isEnabled = true,
+                    isEnabled = isEnabled,
                     action = state.action,
                     expressionJson = expression.toJson(),
-                    createdAt = System.currentTimeMillis(),
+                    createdAt = createdAt,
                 )
             )
             true
@@ -218,6 +224,10 @@ data class FilterRuleUiState(
      * nesting). The editor surfaces a one-shot warning before saving.
      */
     val isAdvancedRule: Boolean = false,
+    /** Enablement of the rule being edited (new rules start enabled). */
+    val editingIsEnabled: Boolean = true,
+    /** Creation timestamp of the rule being edited (null for new rules). */
+    val editingCreatedAt: Long? = null,
 )
 
 /**

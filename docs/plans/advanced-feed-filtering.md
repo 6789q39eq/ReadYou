@@ -289,8 +289,28 @@ Because all feature code is in isolated packages, upstream renames/moves of
 unrelated modules cannot conflict; the only realistic conflicts are import-line
 adjacency in the six touch files listed in §2.7.
 
-## 6. References
+## 6. Follow-up hardening (post-implementation review)
 
+1. **Block-wins is order-independent**: `ArticleFilterEngine.shouldKeep`
+   evaluates all BLOCK rules before ALLOW rules; regression test covers both
+   orders.
+2. **Regexes pre-compiled per batch** into `CompiledFilterRule.regexes`; the
+   per-article timeout is documented as best-effort (blocking Java regex is
+   not cancellable) with the 500-char cap as the primary ReDoS mitigation.
+3. **Google Reader**: filtered-out items are stored as read so they are not
+   re-fetched every sync, and are excluded from unread reconciliation.
+4. **Fever**: mixed-feed batches filter via `filterMixedFeeds`, preserving
+   item order.
+5. **Rule edits preserve** `isEnabled`/`createdAt`; feed/account deletion
+   cascades to `filter_rule` via `deleteByFeed`/`deleteByAccount`.
+6. **Word matching is Unicode-aware** (works for CJK text); expressions
+   deeper than `MAX_DEPTH` are rejected at deserialization.
+
+A composite index on `(accountId, feedId, isEnabled)` was deliberately
+skipped: the table holds at most dozens of user-created rows, so it would
+buy nothing while forcing a DB version bump + exported-schema churn.
+
+## 7. References
 - RSSBrew — https://github.com/yinan-c/RSSbrew (custom filters: AND/OR/NOT groups,
   contains/regex match types on link/title/description)
 - Miniflux filter rules — https://miniflux.app/docs/rules.html (block/keep regex,

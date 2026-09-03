@@ -88,12 +88,23 @@ fun FilterExpression.toJson(): String = FilterExpressionJson.encodeToString(this
 
 /**
  * Deserializes an expression; unknown/corrupt payloads degrade safely to null
- * so a bad rule can never crash sync.
+ * so a bad rule can never crash sync. Expressions deeper than [MAX_DEPTH]
+ * are also rejected, since the UI cannot represent or edit them.
  */
 fun String.toFilterExpressionOrNull(): FilterExpression? = try {
     FilterExpressionJson.decodeFromString(FilterExpression.serializer(), this)
+        .takeIf { it.depth() <= FilterExpression.MAX_DEPTH }
 } catch (_: SerializationException) {
     null
 } catch (_: IllegalArgumentException) {
     null
 }
+
+/** Depth of the expression tree: a lone leaf is depth 1. */
+internal fun FilterExpression.depth(): Int =
+    when (this) {
+        is FilterExpression.Condition -> 1
+        is FilterExpression.AllOf -> 1 + (children.maxOfOrNull { it.depth() } ?: 0)
+        is FilterExpression.AnyOf -> 1 + (children.maxOfOrNull { it.depth() } ?: 0)
+        is FilterExpression.NoneOf -> 1 + (children.maxOfOrNull { it.depth() } ?: 0)
+    }

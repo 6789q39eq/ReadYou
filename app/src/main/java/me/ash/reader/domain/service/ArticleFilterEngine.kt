@@ -7,16 +7,17 @@ import me.ash.reader.domain.model.filter.FilterField
 import me.ash.reader.domain.model.filter.FilterMatchType
 
 /**
- * A [FilterRule] with its expression parsed and ready for evaluation.
+ * A [FilterRule] with its expression parsed and its regexes pre-compiled.
  *
- * Compiling once per sync batch (instead of per article) keeps regex
- * construction cost off the hot path; invalid regexes degrade to a rule that
- * never matches so a bad pattern can never crash sync.
+ * Regexes are compiled once per sync batch (instead of per article) and kept
+ * in [regexes]; invalid patterns map to null and never match, so a bad
+ * pattern can never crash sync.
  */
 data class CompiledFilterRule(
     val id: String,
     val action: FilterAction,
     val expression: FilterExpression,
+    val regexes: Map<FilterCondition, Regex?> = compileRegexes(expression),
 )
 
 /**
@@ -36,30 +37,34 @@ object ArticleFilterEngine {
         article: ArticleSnapshot,
         rules: List<CompiledFilterRule>,
     ): Boolean {
+        // Block wins over allow regardless of rule order: check every BLOCK
+        // rule first, then fall back to ALLOW semantics.
+        for (rule in rules) {
+            if (rule.action == FilterAction.BLOCK && matches(article, rule)) return false
+        }
         var hasAllow = false
         for (rule in rules) {
-            when (rule.action) {
-                FilterAction.BLOCK -> {
-                    if (matches(article, rule.expression)) return false
-                }
-                FilterAction.ALLOW -> {
-                    hasAllow = true
-                    if (matches(article, rule.expression)) return true
-                }
+            if (rule.action == FilterAction.ALLOW) {
+                hasAllow = true
+                if (matches(article, rule)) return true
             }
         }
-        // Block wins over allow: reaching here means nothing blocked us, and
-        // every ALLOW rule (if any) failed to match.
         return !hasAllow
     }
 
     /**
      * Evaluates a single condition against the snapshot's target field.
      * Exposed internally for tests and the UI's live "test your pattern" box.
+     *
+     * When [precompiled] is supplied (sync path) it is reused instead of
+     * compiling a new [Regex] per article; a null entry means the pattern was
+     * invalid at compile time and never matches.
      */
     fun matchesCondition(
         article: ArticleSnapshot,
         condition: FilterCondition,
+        precompiled: Regex? = null,
+        hasPrecompiled: Boolean = false,
     ): Boolean {
         if (condition.pattern.length > MAX_PATTERN_LENGTH) return false
         val value = valueFor(article, condition.field)
@@ -69,13 +74,26 @@ object ArticleFilterEngine {
                     value.contains(condition.pattern, ignoreCase = true)
                 FilterMatchType.NOT_CONTAINS ->
                     !value.contains(condition.pattern, ignoreCase = true)
-                FilterMatchType.WORD_MATCH ->
-                    Regex("\\b${Regex.escape(condition.pattern)}\\b", REGEX_OPTIONS)
-                        .containsMatchIn(value)
-                FilterMatchType.REGEX ->
-                    Regex(condition.pattern, REGEX_OPTIONS).containsMatchIn(value)
-                FilterMatchType.NOT_REGEX ->
-                    !Regex(condition.pattern, REGEX_OPTIONS).containsMatchIn(value)
+                FilterMatchType.WORD_MATCH -> {
+                    val regex =
+                        if (hasPrecompiled) precompiled
+                        else compileWordRegex(condition.pattern)
+                    regex?.containsMatchIn(value) == true
+                }
+                FilterMatchType.REGEX -> {
+                    val regex =
+                        if (hasPrecompiled) precompiled
+                        else compileUserRegex(condition.pattern)
+                    regex?.containsMatchIn(value) == true
+                }
+                FilterMatchType.NOT_REGEX -> {
+                    val regex =
+                        if (hasPrecompiled) precompiled
+                        else compileUserRegex(condition.pattern)
+                    // Invalid regex degrades to no-match, so NOT_REGEX with a
+                    // bad pattern is false (nothing is excluded).
+                    regex != null && !regex.containsMatchIn(value)
+                }
             }
         } catch (_: Exception) {
             // Invalid regex or unexpected failure: never crash sync, treat as no-match.
@@ -85,13 +103,32 @@ object ArticleFilterEngine {
 
     private fun matches(
         article: ArticleSnapshot,
+        rule: CompiledFilterRule,
+    ): Boolean = matches(article, rule.expression, rule.regexes)
+
+    private fun matches(
+        article: ArticleSnapshot,
         expression: FilterExpression,
+        regexes: Map<FilterCondition, Regex?> = emptyMap(),
     ): Boolean =
         when (expression) {
-            is FilterExpression.Condition -> matchesCondition(article, expression.condition)
-            is FilterExpression.AllOf -> expression.children.all { matches(article, it) }
-            is FilterExpression.AnyOf -> expression.children.any { matches(article, it) }
-            is FilterExpression.NoneOf -> expression.children.none { matches(article, it) }
+            is FilterExpression.Condition ->
+                if (regexes.isEmpty()) {
+                    matchesCondition(article, expression.condition)
+                } else {
+                    matchesCondition(
+                        article,
+                        expression.condition,
+                        precompiled = regexes[expression.condition],
+                        hasPrecompiled = true,
+                    )
+                }
+            is FilterExpression.AllOf ->
+                expression.children.all { matches(article, it, regexes) }
+            is FilterExpression.AnyOf ->
+                expression.children.any { matches(article, it, regexes) }
+            is FilterExpression.NoneOf ->
+                expression.children.none { matches(article, it, regexes) }
         }
 
     private fun valueFor(article: ArticleSnapshot, field: FilterField): String =
@@ -103,4 +140,55 @@ object ArticleFilterEngine {
         }
 
     private val REGEX_OPTIONS = setOf(RegexOption.IGNORE_CASE)
+
+    /**
+     * Unicode-aware word boundary: ASCII `\b` never matches inside CJK text,
+     * so whole-word matching uses lookarounds over Unicode letters, digits
+     * and underscore instead.
+     */
+    internal fun compileWordRegex(pattern: String): Regex? =
+        if (pattern.length > MAX_PATTERN_LENGTH) {
+            null
+        } else {
+            runCatching {
+                Regex(
+                    "(?<![\\p{L}\\p{Nd}_])${Regex.escape(pattern)}(?![\\p{L}\\p{Nd}_])",
+                    REGEX_OPTIONS,
+                )
+            }.getOrNull()
+        }
+
+    internal fun compileUserRegex(pattern: String): Regex? =
+        if (pattern.length > MAX_PATTERN_LENGTH) {
+            null
+        } else {
+            runCatching { Regex(pattern, REGEX_OPTIONS) }.getOrNull()
+        }
+}
+
+/**
+ * Walks [expression] and compiles the regex of every condition once, so sync
+ * evaluation never pays regex-construction cost per article. Conditions that
+ * need no regex map to null; invalid patterns map to null and never match.
+ */
+private fun compileRegexes(expression: FilterExpression): Map<FilterCondition, Regex?> {
+    val conditions = mutableListOf<FilterCondition>()
+    fun collect(e: FilterExpression) {
+        when (e) {
+            is FilterExpression.Condition -> conditions += e.condition
+            is FilterExpression.AllOf -> e.children.forEach(::collect)
+            is FilterExpression.AnyOf -> e.children.forEach(::collect)
+            is FilterExpression.NoneOf -> e.children.forEach(::collect)
+        }
+    }
+    collect(expression)
+    return conditions.distinct().associateWith { condition ->
+        when (condition.matchType) {
+            FilterMatchType.WORD_MATCH ->
+                ArticleFilterEngine.compileWordRegex(condition.pattern)
+            FilterMatchType.REGEX, FilterMatchType.NOT_REGEX ->
+                ArticleFilterEngine.compileUserRegex(condition.pattern)
+            FilterMatchType.CONTAINS, FilterMatchType.NOT_CONTAINS -> null
+        }
+    }
 }

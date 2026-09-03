@@ -264,4 +264,72 @@ class ArticleFilterEngineTest {
         val rules = listOf(rule(FilterAction.BLOCK, expr))
         assertFalse(ArticleFilterEngine.shouldKeep(article, rules))
     }
+
+    @Test
+    fun `block wins over allow regardless of rule order`() {
+        val allow =
+            rule(
+                FilterAction.ALLOW,
+                cond(FilterField.TITLE, FilterMatchType.CONTAINS, "kotlin"),
+                id = "allow",
+            )
+        val block =
+            rule(
+                FilterAction.BLOCK,
+                cond(FilterField.TITLE, FilterMatchType.CONTAINS, "released"),
+                id = "block",
+            )
+        // Both rules match this article; the article must be dropped whether
+        // the allow or the block rule comes first.
+        assertFalse(ArticleFilterEngine.shouldKeep(article, listOf(allow, block)))
+        assertFalse(ArticleFilterEngine.shouldKeep(article, listOf(block, allow)))
+    }
+
+    @Test
+    fun `precompiled regexes agree with on-the-fly evaluation`() {
+        val conditions =
+            listOf(
+                FilterCondition(FilterField.TITLE, FilterMatchType.REGEX, "kotlin\\s+\\d"),
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "Kotlin"),
+                FilterCondition(FilterField.TITLE, FilterMatchType.REGEX, "([a-z"),
+            )
+        val expression = FilterExpression.AnyOf(conditions.map { FilterExpression.Condition(it) })
+        val compiled = CompiledFilterRule(id = "r", action = FilterAction.BLOCK, expression = expression)
+        for (condition in conditions) {
+            assertEquals(
+                ArticleFilterEngine.matchesCondition(article, condition),
+                ArticleFilterEngine.matchesCondition(
+                    article,
+                    condition,
+                    precompiled = compiled.regexes[condition],
+                    hasPrecompiled = true,
+                ),
+            )
+        }
+    }
+
+    @Test
+    fun `whole word matching works for CJK text`() {
+        val cjkArticle = article.copy(content = "今天学习Kotlin编程很有趣")
+        val latinArticle = article.copy(content = "I enjoy Kotlin programming")
+        val latinBoundary = article.copy(content = "I enjoy Kotlinic programming")
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                cjkArticle,
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "Kotlin"),
+            )
+        )
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                latinArticle,
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "Kotlin"),
+            )
+        )
+        assertFalse(
+            ArticleFilterEngine.matchesCondition(
+                latinBoundary,
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "Kotlin"),
+            )
+        )
+    }
 }

@@ -1,5 +1,6 @@
 package me.ash.reader.ui.page.settings.filter
 
+import android.os.Parcelable
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
@@ -15,6 +16,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.parcelize.Parcelize
 import me.ash.reader.domain.model.filter.FilterRule
 
 /**
@@ -45,7 +47,8 @@ fun FiltersListDetailPage(
                     navigateToEditRule = { ruleId ->
                         viewModel.startEditing(ruleId)
                         navigateToDetail(FilterEditData(ruleId))
-                    },                    deleteCandidate = deleteCandidate,
+                    },
+                    deleteCandidate = deleteCandidate,
                     onDismissDelete = { deleteCandidate = null },
                     onDeleteRequest = { deleteCandidate = it },
                 )
@@ -65,5 +68,6 @@ fun FiltersListDetailPage(
     )
 }
 
-/** Parcelable navigation payload for the detail pane. */
-data class FilterEditData(val ruleId: String?)
+/** Parcelable navigation payload for the detail pane (survives process death). */
+@Parcelize
+data class FilterEditData(val ruleId: String?) : Parcelable

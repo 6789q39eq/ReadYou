@@ -100,6 +100,8 @@ fun FiltersListContent(
             }
         },
         content = {
+            val (globalRules, feedRules) =
+                remember(rules) { rules.partition { it.feedId == null } }
             LazyColumn {
                 item {
                     DisplayText(text = stringResource(R.string.filter_rules), desc = "")
@@ -115,15 +117,15 @@ fun FiltersListContent(
                         Spacer(modifier = Modifier.height(16.dp))
                     }
                 } else {
-                    item {
-                        Subtitle(
-                            text = stringResource(R.string.filter_rule_global),
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                        )
-                    }
-                    items(rules.size) { index ->
-                        val rule = rules[index]
-                        if (rule.feedId == null) {
+                    if (globalRules.isNotEmpty()) {
+                        item {
+                            Subtitle(
+                                text = stringResource(R.string.filter_rule_global),
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                            )
+                        }
+                        items(globalRules.size) { index ->
+                            val rule = globalRules[index]
                             RuleRow(
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },
@@ -135,15 +137,15 @@ fun FiltersListContent(
                             )
                         }
                     }
-                    item {
-                        Subtitle(
-                            text = stringResource(R.string.filter_rule_feed),
-                            modifier = Modifier.padding(horizontal = 20.dp),
-                        )
-                    }
-                    items(rules.size) { index ->
-                        val rule = rules[index]
-                        if (rule.feedId != null) {
+                    if (feedRules.isNotEmpty()) {
+                        item {
+                            Subtitle(
+                                text = stringResource(R.string.filter_rule_feed),
+                                modifier = Modifier.padding(horizontal = 20.dp),
+                            )
+                        }
+                        items(feedRules.size) { index ->
+                            val rule = feedRules[index]
                             RuleRow(
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },

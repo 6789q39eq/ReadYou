@@ -21,33 +21,6 @@ interface FilterRuleDao {
     )
     fun observeByAccount(accountId: Int): Flow<List<FilterRule>>
 
-    @Query(
-        """
-        SELECT * FROM filter_rule
-        WHERE accountId = :accountId AND isEnabled = 1
-        ORDER BY createdAt ASC
-        """
-    )
-    suspend fun findEnabledByAccount(accountId: Int): List<FilterRule>
-
-    @Query(
-        """
-        SELECT * FROM filter_rule
-        WHERE feedId = :feedId
-        ORDER BY createdAt ASC
-        """
-    )
-    fun observeByFeed(feedId: String): Flow<List<FilterRule>>
-
-    @Query(
-        """
-        SELECT * FROM filter_rule
-        WHERE feedId = :feedId AND isEnabled = 1
-        ORDER BY createdAt ASC
-        """
-    )
-    suspend fun findEnabledByFeed(feedId: String): List<FilterRule>
-
     /**
      * Enabled rules applicable to one feed in evaluation order:
      * global rules (feedId IS NULL) first, then feed-specific rules.
@@ -77,9 +50,9 @@ interface FilterRuleDao {
     @Delete
     suspend fun delete(rule: FilterRule)
 
-    @Query("DELETE FROM filter_rule WHERE id IN (:ids)")
-    suspend fun deleteByIds(ids: List<String>)
-
     @Query("DELETE FROM filter_rule WHERE feedId = :feedId")
     suspend fun deleteByFeed(feedId: String)
+
+    @Query("DELETE FROM filter_rule WHERE accountId = :accountId")
+    suspend fun deleteByAccount(accountId: Int)
 }

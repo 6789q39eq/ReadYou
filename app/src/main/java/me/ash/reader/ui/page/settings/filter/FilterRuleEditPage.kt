@@ -7,7 +7,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -35,9 +35,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.ash.reader.R
@@ -49,28 +49,15 @@ import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYDialog
 import me.ash.reader.ui.component.base.RYScaffold
 import me.ash.reader.ui.component.base.Subtitle
+import me.ash.reader.ui.ext.showToast
 
 /**
+ * The rule editor, shared by the compact page and the detail pane of
+ * [FiltersListDetailPage].
+ *
  * Create/edit a filter rule (simple mode): name, action, and a flat list of
  * condition rows. Conditions are OR'd for BLOCK rules and AND'd for ALLOW
  * rules when saved — see [FilterExpression.simple].
- */
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun FilterRuleEditPage(
-    onBack: () -> Unit,
-    viewModel: FilterRuleViewModel = hiltViewModel(),
-) {
-    FilterRuleEditContent(
-        viewModel = viewModel,
-        isTwoPane = false,
-        onBack = onBack,
-    )
-}
-
-/**
- * The editor itself, shared by the compact page and the detail pane of
- * [FiltersListDetailPage].
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,6 +69,7 @@ fun FilterRuleEditContent(
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     var showTestDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     RYScaffold(
         containerColor = MaterialTheme.colorScheme.surface,
@@ -108,11 +96,12 @@ fun FilterRuleEditContent(
                 TextButton(onClick = onBack) {
                     Text(text = stringResource(R.string.cancel))
                 }
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.width(8.dp))
                 TextButton(
                     onClick = {
                         coroutineScope.launch {
                             if (viewModel.save()) onBack()
+                            else context.showToast(context.getString(R.string.filter_rule_incomplete))
                         }
                     }
                 ) {
@@ -210,7 +199,7 @@ fun FilterRuleEditContent(
                     modifier = Modifier.padding(horizontal = 12.dp),
                 ) {
                     Icon(imageVector = Icons.Outlined.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.width(4.dp))
                     Text(text = stringResource(R.string.filter_rule_add_condition))
                 }
                 Spacer(modifier = Modifier.height(24.dp))
@@ -256,13 +245,14 @@ private fun ConditionRow(
                 onSelect = onFieldChange,
                 modifier = Modifier.weight(1f),
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.width(8.dp))
             MatchTypeDropdown(
                 selected = condition.matchType,
                 onSelect = onMatchTypeChange,
                 modifier = Modifier.weight(1f),
             )
             if (canRemove) {
+                Spacer(modifier = Modifier.width(8.dp))
                 FeedbackIconButton(
                     imageVector = Icons.Outlined.Delete,
                     contentDescription = stringResource(R.string.delete),

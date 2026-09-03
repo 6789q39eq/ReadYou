@@ -16,14 +16,17 @@ import timber.log.Timber
  * Sync-pipeline hook: drops incoming articles that match BLOCK rules and,
  * when any ALLOW rule exists, keeps only articles matching at least one.
  *
- * Rules are loaded once per feed batch and compiled once; with zero enabled
- * rules the hook is a passthrough no-op, so the feature costs nothing until
- * configured (see docs/plans/advanced-feed-filtering.md §2.7).
+ * Rules are loaded once per feed batch and their regexes compiled once; with
+ * zero enabled rules the hook is a passthrough no-op, so the feature costs
+ * nothing until configured (see docs/plans/advanced-feed-filtering.md §2.7).
  *
- * Each article's evaluation is wrapped in [PER_ARTICLE_TIMEOUT_MS] to bound
- * the worst-case impact of a pathological user-supplied regex (ReDoS). If an
- * evaluation times out we treat the article as "keep" and log once per
- * article-rule combination so the user can locate the bad rule.
+ * Each article's evaluation is wrapped in [PER_ARTICLE_TIMEOUT_MS] as a
+ * best-effort guard against pathological user-supplied regexes (ReDoS).
+ * Blocking Java regex evaluation is not cooperatively cancellable, so the
+ * timeout bounds everything *around* the match (scheduling, DAO, batch
+ * overhead) but cannot preempt a stuck match itself; the 500-char pattern
+ * cap in [ArticleFilterEngine] is the primary ReDoS mitigation. On timeout
+ * the article is kept and the event logged so the user can locate the rule.
  */
 @Singleton
 class ApplyFeedFiltersUseCase
@@ -42,31 +45,77 @@ constructor(
         accountId: Int,
         feedId: String,
         articles: List<Article>,
+    ): List<Article> =
+        partition(accountId, feedId, articles).first
+
+    /**
+     * Like [invoke] but also returns the dropped articles, so callers that
+     * must account for every fetched item (e.g. Google Reader, which would
+     * otherwise re-fetch dropped items on every sync) can handle them.
+     */
+    suspend fun partition(
+        accountId: Int,
+        feedId: String,
+        articles: List<Article>,
+    ): Pair<List<Article>, List<Article>> = try {
+        withContext(defaultDispatcher) {
+            val rules = loadCompiled(accountId, feedId)
+            if (rules.isEmpty()) {
+                articles to emptyList()
+            } else {
+                val kept = ArrayList<Article>(articles.size)
+                val dropped = ArrayList<Article>()
+                for (article in articles) {
+                    if (evaluateWithTimeout(article.toSnapshot(), rules)) {
+                        kept += article
+                    } else {
+                        dropped += article
+                    }
+                }
+                kept to dropped
+            }
+        }
+    } catch (t: Throwable) {
+        Timber.tag(TAG).w(t, "applyFeedFilters failed; keeping all %d articles", articles.size)
+        articles to emptyList()
+    }
+
+    /**
+     * Filters a batch that mixes several feeds (Fever sync) while preserving
+     * the input order. Rules are loaded once per distinct feed.
+     */
+    suspend fun filterMixedFeeds(
+        accountId: Int,
+        articles: List<Article>,
+        feedIdOf: (Article) -> String = { it.feedId },
     ): List<Article> = try {
         withContext(defaultDispatcher) {
-            val rules =
-                filterRuleDao.findEnabledForAccountAndFeed(accountId, feedId)
-                    .mapNotNull { rule ->
-                        rule.expressionJson.toFilterExpressionOrNull()?.let { expression ->
-                            CompiledFilterRule(
-                                id = rule.id,
-                                action = rule.action,
-                                expression = expression,
-                            )
-                        }
-                    }
-            if (rules.isEmpty()) {
-                articles
-            } else {
-                articles.filter { article ->
-                    evaluateWithTimeout(article.toSnapshot(), rules)
-                }
+            val rulesByFeed = mutableMapOf<String, List<CompiledFilterRule>>()
+            articles.filter { article ->
+                val feedId = feedIdOf(article)
+                val rules = rulesByFeed.getOrPut(feedId) { loadCompiled(accountId, feedId) }
+                rules.isEmpty() || evaluateWithTimeout(article.toSnapshot(), rules)
             }
         }
     } catch (t: Throwable) {
         Timber.tag(TAG).w(t, "applyFeedFilters failed; keeping all %d articles", articles.size)
         articles
     }
+
+    private suspend fun loadCompiled(
+        accountId: Int,
+        feedId: String,
+    ): List<CompiledFilterRule> =
+        filterRuleDao.findEnabledForAccountAndFeed(accountId, feedId)
+            .mapNotNull { rule ->
+                rule.expressionJson.toFilterExpressionOrNull()?.let { expression ->
+                    CompiledFilterRule(
+                        id = rule.id,
+                        action = rule.action,
+                        expression = expression,
+                    )
+                }
+            }
 
     /**
      * Evaluates [article] against [rules] with a per-article timeout. Returns

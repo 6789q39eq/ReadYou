@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.windowInsetsBottomHeight
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material3.Icon
@@ -35,6 +36,8 @@ import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYDialog
 import me.ash.reader.ui.component.base.RYScaffold
 import me.ash.reader.ui.component.base.Subtitle
+import me.ash.reader.ui.component.swipe.SwipeAction
+import me.ash.reader.ui.component.swipe.SwipeableActionsBox
 import me.ash.reader.ui.ext.surfaceColorAtElevation
 import me.ash.reader.ui.page.settings.SettingItem
 import me.ash.reader.ui.theme.palette.onLight
@@ -199,18 +202,37 @@ private fun RuleRow(
     onEdit: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    SettingItem(
-        title = rule.name,
-        desc =
-            stringResource(
-                if (rule.action == FilterAction.BLOCK) {
-                    R.string.filter_rule_action_block_desc
-                } else {
-                    R.string.filter_rule_action_allow_desc
-                }
+    SwipeableActionsBox(
+        endActions =
+            listOf(
+                SwipeAction(
+                    onSwipe = onDelete,
+                    icon = {
+                        Icon(
+                            imageVector = Icons.Outlined.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.padding(horizontal = 24.dp),
+                        )
+                    },
+                    background = MaterialTheme.colorScheme.errorContainer,
+                )
             ),
-        onClick = onEdit,
+        backgroundUntilSwipeThreshold = MaterialTheme.colorScheme.surface,
     ) {
-        Switch(checked = rule.isEnabled, onCheckedChange = onToggle)
+        SettingItem(
+            title = rule.name,
+            desc =
+                stringResource(
+                    if (rule.action == FilterAction.BLOCK) {
+                        R.string.filter_rule_action_block_desc
+                    } else {
+                        R.string.filter_rule_action_allow_desc
+                    }
+                ),
+            onClick = onEdit,
+        ) {
+            Switch(checked = rule.isEnabled, onCheckedChange = onToggle)
+        }
     }
 }

@@ -54,6 +54,7 @@ glance = "1.2.0-beta01"
 
 nav3 = "1.0.0"
 kotlinxSerializationCore = "1.9.0"
+kotlinxCoroutines = "1.9.0"
 viewmodelNav3 = "2.10.0"
 material3Adaptive = "1.3.0-alpha06"
 
@@ -130,6 +131,7 @@ navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", ver
 navigation3-ui = { module = "androidx.navigation3:navigation3-ui", version.ref = "nav3" }
 lifecycle-viewmodel-navigation3 = { module = "androidx.lifecycle:lifecycle-viewmodel-navigation3", version.ref = "viewmodelNav3" }
 kotlinx-serialization-core = { module = "org.jetbrains.kotlinx:kotlinx-serialization-core", version.ref = "kotlinxSerializationCore" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinxCoroutines" }
 navigationevent = { module = "androidx.navigationevent:navigationevent", version.ref = "navigationevent" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "kotlinxSerializationCore" }
 

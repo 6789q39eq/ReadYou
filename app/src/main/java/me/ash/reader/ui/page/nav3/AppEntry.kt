@@ -13,7 +13,6 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.material3.adaptive.navigation.rememberListDetailPaneScaffoldNavigator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -25,7 +24,6 @@ import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import me.ash.reader.ui.motion.materialSharedAxisXIn
 import me.ash.reader.ui.motion.materialSharedAxisXOut
 import me.ash.reader.ui.page.adaptive.ArticleData
@@ -50,9 +48,8 @@ import me.ash.reader.ui.page.settings.color.reading.ReadingTextPage
 import me.ash.reader.ui.page.settings.color.reading.ReadingTitlePage
 import me.ash.reader.ui.page.settings.color.reading.ReadingVideoPage
 import me.ash.reader.ui.page.settings.interaction.InteractionPage
-import me.ash.reader.ui.page.settings.filter.FilterEditData
+import me.ash.reader.ui.page.settings.filter.FilterRuleEditPage
 import me.ash.reader.ui.page.settings.filter.FilterRuleViewModel
-import me.ash.reader.ui.page.settings.filter.FiltersListDetailPage
 import me.ash.reader.ui.page.settings.filter.FiltersPage
 import me.ash.reader.ui.page.settings.languages.LanguagesPage
 import me.ash.reader.ui.page.settings.tips.LicenseListPage
@@ -70,7 +67,6 @@ private const val INITIAL_OFFSET_FACTOR = 0.10f
 @Composable
 fun AppEntry(backStack: NavBackStack<NavKey>) {
     val subscribeViewModel = hiltViewModel<SubscribeViewModel>()
-    val scope = rememberCoroutineScope()
 
     val onBack: () -> Unit = {
         if (backStack.size == 1) backStack[0] = Route.Feeds else backStack.removeLastOrNull()
@@ -80,12 +76,6 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
 
     val navigator =
         rememberListDetailPaneScaffoldNavigator<ArticleData>(
-            scaffoldDirective = scaffoldDirective,
-            isDestinationHistoryAware = false,
-        )
-
-    val filtersNavigator =
-        rememberListDetailPaneScaffoldNavigator<FilterEditData>(
             scaffoldDirective = scaffoldDirective,
             isDestinationHistoryAware = false,
         )
@@ -295,18 +285,9 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                 filterViewModel.startEditing(key.ruleId, key.feedId)
                             }
 
-                            FiltersListDetailPage(
-                                scaffoldNavigator = filtersNavigator,
-                                navigateToDetail = {
-                                    scope.launch {
-                                        filtersNavigator.navigateTo(
-                                            ListDetailPaneScaffoldRole.Detail,
-                                            it,
-                                        )
-                                    }
-                                },
-                                animatedVisibilityScope = LocalNavAnimatedContentScope.current,
+                            FilterRuleEditPage(
                                 viewModel = filterViewModel,
+                                onBack = onBack,
                             )
                         }
                     Route.Languages -> NavEntry(key) { LanguagesPage(onBack = onBack) }

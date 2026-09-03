@@ -66,8 +66,10 @@ fun FiltersPage(
 }
 
 /**
- * The rule list itself, shared by the compact page and the list pane of
- * [FiltersListDetailPage].
+ * The rule list itself. The detail editor lives on its own
+ * [me.ash.reader.ui.page.nav3.key.Route.FilterEdit] destination, so the
+ * tap-to-edit path stays a single back-stack push and the back/cancel/save
+ * buttons can pop the back stack directly.
  */
 @Composable
 fun FiltersListContent(
@@ -98,7 +100,6 @@ fun FiltersListContent(
                 contentDescription = stringResource(R.string.filter_rule_add),
                 tint = MaterialTheme.colorScheme.onSurface,
             ) {
-                viewModel.startEditing(null)
                 navigateToEditRule(null)
             }
         },
@@ -132,10 +133,7 @@ fun FiltersListContent(
                             RuleRow(
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },
-                                onEdit = {
-                                    viewModel.startEditing(rule.id)
-                                    navigateToEditRule(rule.id)
-                                },
+                                onEdit = { navigateToEditRule(rule.id) },
                                 onDelete = { onDeleteRequest(rule) },
                             )
                         }
@@ -152,10 +150,7 @@ fun FiltersListContent(
                             RuleRow(
                                 rule = rule,
                                 onToggle = { viewModel.setEnabled(rule, it) },
-                                onEdit = {
-                                    viewModel.startEditing(rule.id)
-                                    navigateToEditRule(rule.id)
-                                },
+                                onEdit = { navigateToEditRule(rule.id) },
                                 onDelete = { onDeleteRequest(rule) },
                             )
                         }

@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.ash.reader.R
@@ -52,8 +53,9 @@ import me.ash.reader.ui.component.base.Subtitle
 import me.ash.reader.ui.ext.showToast
 
 /**
- * The rule editor, shared by the compact page and the detail pane of
- * [FiltersListDetailPage].
+ * The rule editor. Used as the destination of
+ * [me.ash.reader.ui.page.nav3.key.Route.FilterEdit], so the back arrow,
+ * Cancel and Save buttons all pop the back stack via [onBack].
  *
  * Create/edit a filter rule (simple mode): name, action, and a flat list of
  * condition rows. Conditions are OR'd for BLOCK rules and AND'd for ALLOW
@@ -401,4 +403,27 @@ private fun AdvancedRuleWarning(onDismiss: () -> Unit) {
             }
         }
     }
+}
+
+/**
+ * Compact (single-pane) host for [FilterRuleEditContent]. Used as the
+ * destination of [me.ash.reader.ui.page.nav3.key.Route.FilterEdit]: a push on
+ * the back stack opens the editor and any of the back arrow, Cancel or Save
+ * pops the back stack via [onBack].
+ *
+ * The two-pane variant that previously wrapped the editor in a
+ * `ListDetailPaneScaffold` was removed because it made the navigation
+ * ambiguous on phones — pressing back from the editor would only collapse
+ * the inner scaffold, never return to the previous screen.
+ */
+@Composable
+fun FilterRuleEditPage(
+    onBack: () -> Unit,
+    viewModel: FilterRuleViewModel = hiltViewModel(),
+) {
+    FilterRuleEditContent(
+        viewModel = viewModel,
+        isTwoPane = false,
+        onBack = onBack,
+    )
 }

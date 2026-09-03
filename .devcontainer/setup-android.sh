@@ -13,10 +13,11 @@ CMDLINE_URL="https://dl.google.com/android/repository/${CMDLINE_ZIP}"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# 1. JDK 17 (required to run Gradle 8.x / AGP 8.x) + helpers.
-if [ ! -x /usr/lib/jvm/java-17-openjdk-amd64/bin/java ]; then
+# 1. JDK 17 (required to run Gradle 8.x / AGP 8.x) + helpers + gh CLI
+#    (gh publishes test APKs via .devcontainer/publish-apk.sh).
+if [ ! -x /usr/lib/jvm/java-17-openjdk-amd64/bin/java ] || ! command -v gh >/dev/null 2>&1; then
   sudo apt-get update -qq
-  sudo apt-get install -y -qq openjdk-17-jdk unzip wget
+  sudo apt-get install -y -qq openjdk-17-jdk unzip wget gh
 fi
 
 # 2. Android SDK command-line tools (idempotent).

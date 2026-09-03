@@ -389,7 +389,7 @@
 
     <!-- Filter rules -->
     <string name="filter_rules">Filter rules</string>
-    <string name="filter_rules_desc">Block or allow incoming articles by keywords and regex</string>
+    <string name="filter_rules_desc">Block or allow, keywords, regex</string>
     <string name="filter_rule_global">Global rules</string>
     <string name="filter_rule_feed">Feed rules</string>
     <string name="filter_rule_add">Add rule</string>

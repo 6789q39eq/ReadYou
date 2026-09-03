@@ -40,10 +40,24 @@ export PATH="${SDK_ROOT}/cmdline-tools/latest/bin:${SDK_ROOT}/platform-tools:${P
 yes | sdkmanager --licenses >/dev/null 2>&1 || true
 sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0"
 
-# 4. Gradle memory settings for small codespace VMs (kept out of the repo).
+# 4. Gradle settings for small codespace VMs (kept out of the repo).
+#    Validated on an 8GB box: the Gradle daemon is SIGKilled even at -Xmx2g,
+#    so it stays off (equivalent of --no-daemon) and every JVM is capped.
+#    Without this, builds die with "Gradle build daemon disappeared
+#    unexpectedly" before any task runs.
 mkdir -p "${HOME}/.gradle"
-if ! grep -q "org.gradle.jvmargs" "${HOME}/.gradle/gradle.properties" 2>/dev/null; then
-  printf 'org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8\norg.gradle.caching=true\norg.gradle.workers.max=2\nkotlin.daemon.jvmargs=-Xmx1g\n' >> "${HOME}/.gradle/gradle.properties"
+if ! grep -q "codespace-android" "${HOME}/.gradle/gradle.properties" 2>/dev/null; then
+  if [ -f "${HOME}/.gradle/gradle.properties" ]; then
+    cp "${HOME}/.gradle/gradle.properties" "${HOME}/.gradle/gradle.properties.bak"
+  fi
+  cat > "${HOME}/.gradle/gradle.properties" <<'EOF'
+# codespace-android: lean defaults, see .devcontainer/setup-android.sh
+org.gradle.daemon=false
+org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
+org.gradle.caching=true
+org.gradle.workers.max=2
+kotlin.daemon.jvmargs=-Xmx1g
+EOF
 fi
 
 echo "Android SDK ready at ${SDK_ROOT}"

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Debug overlay: orange background so the side-by-side test build is
+    visually distinct from the release icon (near-white). -->
+<resources>
+    <color name="ic_launcher_background">#FF6D00</color>
+</resources>

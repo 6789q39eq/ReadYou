@@ -90,6 +90,15 @@ android {
             )
             signingConfig = signingConfigs.getByName("release")
         }
+        // Test builds install side-by-side with the store release:
+        // distinct applicationId, label, and launcher background so the OS
+        // (and the user) never confuses the two.
+        getByName("debug") {
+            applicationIdSuffix = ".debug"
+            resValue("string", "read_you", "ReadYou Test")
+            resValue("string", "list_widget_label", "List view (Test)")
+            resValue("string", "card_widget_label", "Card view (Test)")
+        }
         all { signingConfig = signingConfigs.getByName("release") }
     }
     applicationVariants.all {

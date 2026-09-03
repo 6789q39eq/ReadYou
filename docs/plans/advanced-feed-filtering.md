@@ -303,8 +303,11 @@ adjacency in the six touch files listed in §2.7.
    item order.
 5. **Rule edits preserve** `isEnabled`/`createdAt`; feed/account deletion
    cascades to `filter_rule` via `deleteByFeed`/`deleteByAccount`.
-6. **Word matching is Unicode-aware** (works for CJK text); expressions
-   deeper than `MAX_DEPTH` are rejected at deserialization.
+6. **Word matching uses ASCII-only boundaries** (CJK characters act as
+   separators, so Latin words match inside CJK text); non-ASCII patterns
+   degrade to substring matching since continuous scripts have no word
+   boundaries. Expressions deeper than `MAX_DEPTH` are rejected at
+   deserialization.
 
 A composite index on `(accountId, feedId, isEnabled)` was deliberately
 skipped: the table holds at most dozens of user-created rows, so it would

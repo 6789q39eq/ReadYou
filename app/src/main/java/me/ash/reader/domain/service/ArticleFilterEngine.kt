@@ -75,10 +75,16 @@ object ArticleFilterEngine {
                 FilterMatchType.NOT_CONTAINS ->
                     !value.contains(condition.pattern, ignoreCase = true)
                 FilterMatchType.WORD_MATCH -> {
-                    val regex =
-                        if (hasPrecompiled) precompiled
-                        else compileWordRegex(condition.pattern)
-                    regex?.containsMatchIn(value) == true
+                    if (!isAsciiWordPattern(condition.pattern)) {
+                        // CJK/complex patterns have no word boundaries (continuous
+                        // script), so whole-word degrades to substring matching.
+                        value.contains(condition.pattern, ignoreCase = true)
+                    } else {
+                        val regex =
+                            if (hasPrecompiled) precompiled
+                            else compileWordRegex(condition.pattern)
+                        regex?.containsMatchIn(value) == true
+                    }
                 }
                 FilterMatchType.REGEX -> {
                     val regex =
@@ -142,21 +148,27 @@ object ArticleFilterEngine {
     private val REGEX_OPTIONS = setOf(RegexOption.IGNORE_CASE)
 
     /**
-     * Unicode-aware word boundary: ASCII `\b` never matches inside CJK text,
-     * so whole-word matching uses lookarounds over Unicode letters, digits
-     * and underscore instead.
+     * Word boundaries are ASCII-only (`[A-Za-z0-9_]`), like Java's default
+     * `\b`: this keeps Latin whole-word matching working inside CJK text
+     * (CJK characters act as separators, not word characters). Patterns that
+     * are not pure ASCII words have no meaningful boundaries and are handled
+     * with substring semantics at the call site.
      */
     internal fun compileWordRegex(pattern: String): Regex? =
-        if (pattern.length > MAX_PATTERN_LENGTH) {
+        if (pattern.length > MAX_PATTERN_LENGTH || !isAsciiWordPattern(pattern)) {
             null
         } else {
             runCatching {
                 Regex(
-                    "(?<![\\p{L}\\p{Nd}_])${Regex.escape(pattern)}(?![\\p{L}\\p{Nd}_])",
+                    "(?<![A-Za-z0-9_])${Regex.escape(pattern)}(?![A-Za-z0-9_])",
                     REGEX_OPTIONS,
                 )
             }.getOrNull()
         }
+
+    internal fun isAsciiWordPattern(pattern: String): Boolean =
+        pattern.isNotEmpty() &&
+            pattern.all { it in 'a'..'z' || it in 'A'..'Z' || it in '0'..'9' || it == '_' }
 
     internal fun compileUserRegex(pattern: String): Regex? =
         if (pattern.length > MAX_PATTERN_LENGTH) {

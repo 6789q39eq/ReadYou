@@ -331,5 +331,18 @@ class ArticleFilterEngineTest {
                 FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "Kotlin"),
             )
         )
+        // CJK patterns have no word boundaries: substring semantics apply.
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                cjkArticle,
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "学习"),
+            )
+        )
+        assertFalse(
+            ArticleFilterEngine.matchesCondition(
+                latinArticle,
+                FilterCondition(FilterField.CONTENT, FilterMatchType.WORD_MATCH, "学习"),
+            )
+        )
     }
 }

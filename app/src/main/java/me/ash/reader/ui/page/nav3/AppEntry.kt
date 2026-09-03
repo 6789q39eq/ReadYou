@@ -51,7 +51,6 @@ import me.ash.reader.ui.page.settings.color.reading.ReadingTitlePage
 import me.ash.reader.ui.page.settings.color.reading.ReadingVideoPage
 import me.ash.reader.ui.page.settings.interaction.InteractionPage
 import me.ash.reader.ui.page.settings.filter.FilterEditData
-import me.ash.reader.ui.page.settings.filter.FilterRuleEditPage
 import me.ash.reader.ui.page.settings.filter.FilterRuleViewModel
 import me.ash.reader.ui.page.settings.filter.FiltersListDetailPage
 import me.ash.reader.ui.page.settings.filter.FiltersPage

@@ -2,7 +2,7 @@
   "name": "ReadYou",
   "image": "mcr.microsoft.com/devcontainers/base:ubuntu-24.04",
   
-  "onCreateCommand": "sudo apk add --no-cache py3-pip 2>/dev/null; sudo apt-get update -qq 2>/dev/null && sudo apt-get install -y -qq python3-pip python3-venv git-lfs 2>/dev/null; python3 -m pip install --user --break-system-packages --quiet pipx && (python3 -m pipx ensurepath || true) && python3 -m pipx install mcp-server-fetch duckduckgo-mcp-server",
+  "onCreateCommand": "sudo apk add --no-cache py3-pip 2>/dev/null; sudo apt-get update -qq 2>/dev/null && sudo apt-get install -y -qq python3-pip python3-venv git-lfs 2>/dev/null; python3 -m pip install --user --break-system-packages --quiet pipx && (python3 -m pipx ensurepath || true) && python3 -m pipx install mcp-server-fetch duckduckgo-mcp-server; bash \"${containerWorkspaceFolder}/.devcontainer/setup-android.sh\"",
   "postCreateCommand": "curl -fsSL https://opencode.ai/install | bash -s -- --no-modify-path",
   "customizations": {
     "vscode": {
@@ -13,6 +13,9 @@
   },
   "remoteEnv": {
     "OPENROUTER_API_KEY": "${localEnv:OPENROUTER_API_KEY}",
-    "PATH": "${containerEnv:PATH}:/home/vscode/.opencode/bin"
+    "ANDROID_HOME": "/opt/android-sdk",
+    "ANDROID_SDK_ROOT": "/opt/android-sdk",
+    "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
+    "PATH": "${containerEnv:PATH}:/home/vscode/.opencode/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools"
   }
 }

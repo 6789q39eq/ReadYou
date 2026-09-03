@@ -1,6 +1,9 @@
 name: "Build Commit"
 on: push
 
+permissions:
+    contents: write
+
 jobs:
     build:
         runs-on: ubuntu-latest
@@ -12,9 +15,27 @@ jobs:
                   java-version: 17
 
             - uses: gradle/gradle-build-action@v2.4.2
-            - run: ./gradlew assembleGithubRelease
+            # Debug variant: carries the side-by-side rules from
+            # app/build.gradle.kts (.debug applicationId, Test label/icon),
+            # so per-commit APKs install next to the store release.
+            - run: ./gradlew assembleGithubDebug
 
             - uses: actions/upload-artifact@v4
               with:
                   name: ReadYou-GitHub-Build-${{ github.sha }}
-                  path: app/build/outputs/apk/github/release/*.apk
+                  path: app/build/outputs/apk/github/debug/*.apk
+
+            # Rolling prerelease: every push refreshes the same release page.
+            - name: Publish APK to rolling prerelease
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  APK=$(ls app/build/outputs/apk/github/debug/*.apk | head -1)
+                  if gh release view continuous >/dev/null 2>&1; then
+                    gh release upload continuous --clobber "$APK"
+                  else
+                    gh release create continuous --prerelease \
+                      --title "Latest test build (continuous)" \
+                      --notes "Rolling side-by-side test build (me.ash.reader.debug) refreshed on every push. Debug-signed; allow installs from unknown sources when asked." \
+                      "$APK"
+                  fi

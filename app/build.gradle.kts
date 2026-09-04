@@ -1,5 +1,5 @@
 import java.io.FileInputStream
-import java.time.LocalDate
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Properties
 import org.jetbrains.kotlin.compose.compiler.gradle.ComposeFeatureFlag
@@ -25,7 +25,7 @@ fun fetchGitCommitHash(): String {
 }
 
 val gitCommitHash = fetchGitCommitHash()
-val buildDate = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE)
+val buildTimestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
 val keyProps = Properties()
 val releaseKeyPropsFile: File = rootProject.file("signature/keystore_release.properties")
 val debugKeyPropsFile: File = rootProject.file("signature/keystore.properties")
@@ -107,7 +107,7 @@ android {
     applicationVariants.all {
         outputs.all {
             (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName =
-                "ReadYou-${defaultConfig.versionName}-${buildDate}-${gitCommitHash}.apk"
+                "ReadYou-${defaultConfig.versionName}-${buildTimestamp}-${gitCommitHash}.apk"
         }
     }
     kotlinOptions {

@@ -247,11 +247,7 @@ constructor(
         filterStateUseCase.updateFilterState(feed = null, group = null, searchContent = null)
 
     fun changeFilter(filterState: FilterState) {
-        filterStateUseCase.updateFilterState(
-            filterState.feed,
-            filterState.group,
-            filterState.filter,
-        )
+        filterStateUseCase.updateFilterState(filterState)
     }
 
     fun inputSearchContent(content: String? = null) {

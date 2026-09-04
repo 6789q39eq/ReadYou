@@ -70,6 +70,7 @@ import me.ash.reader.infrastructure.preference.LocalFeedsTopBarTonalElevation
 import me.ash.reader.infrastructure.preference.LocalNewVersionNumber
 import me.ash.reader.infrastructure.preference.LocalSkipVersionNumber
 import me.ash.reader.ui.component.FilterBar
+import me.ash.reader.ui.component.FilterRuleSelectionDialog
 import me.ash.reader.ui.component.base.DisplayText
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYScaffold
@@ -103,6 +104,7 @@ fun FeedsPage(
     navigateToFilterRules: ((feedId: String?) -> Unit)? = null,
 ) {
     var accountTabVisible by remember { mutableStateOf(false) }
+    var filterSelectorVisible by remember { mutableStateOf(false) }
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -346,9 +348,24 @@ fun FeedsPage(
                 filterBarPadding = filterBarPadding.dp,
                 filterBarTonalElevation = filterBarTonalElevation.value.dp,
             ) {
-                feedsViewModel.changeFilter(filterState.copy(filter = it))
+                // Left (Starred) unchanged, right (All) shows everything
+                // unfiltered. Middle (Unread) is the filtered view: switching
+                // to it also opens the rule selector (selected rules + unread
+                // pseudo-rule). Tapping middle while already there re-opens
+                // the selector so the selection can be changed.
+                if (it.isUnread()) {
+                    feedsViewModel.changeFilter(filterState.copy(filter = it))
+                    filterSelectorVisible = true
+                } else {
+                    feedsViewModel.changeFilter(filterState.copy(filter = it))
+                }
             }
         },
+    )
+
+    FilterRuleSelectionDialog(
+        visible = filterSelectorVisible,
+        onDismiss = { filterSelectorVisible = false },
     )
 
     SubscribeDialog(subscribeViewModel = subscribeViewModel)

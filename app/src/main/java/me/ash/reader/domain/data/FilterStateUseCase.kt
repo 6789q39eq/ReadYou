@@ -36,9 +36,18 @@ constructor(
         group: Group? = filterState.group,
         filter: Filter = filterState.filter,
         searchContent: String? = filterState.searchContent,
+        appliedRuleIds: Set<String> = filterState.appliedRuleIds,
+        unreadOnlyInFiltered: Boolean = filterState.unreadOnlyInFiltered,
     ) {
         _filterUiState.update {
-            it.copy(feed = feed, group = group, searchContent = searchContent, filter = filter)
+            it.copy(
+                feed = feed,
+                group = group,
+                searchContent = searchContent,
+                filter = filter,
+                appliedRuleIds = appliedRuleIds,
+                unreadOnlyInFiltered = unreadOnlyInFiltered,
+            )
         }
     }
 
@@ -60,4 +69,16 @@ data class FilterState(
     val feed: Feed? = null,
     val filter: Filter = Filter.All,
     val searchContent: String? = null,
+    /**
+     * User filter rules applied as a view-time filter in the middle
+     * (Unread) tab. Empty ⇒ no rule filtering. Ignored by the All
+     * (right, shows everything) and Starred (left, unchanged) tabs.
+     */
+    val appliedRuleIds: Set<String> = emptySet(),
+    /**
+     * Unread pseudo-rule for the middle tab: true ⇒ middle shows unread
+     * only, false ⇒ middle shows read+unread. Listed in the middle-tab
+     * selector but never appears in Settings → Filter rules.
+     */
+    val unreadOnlyInFiltered: Boolean = true,
 )

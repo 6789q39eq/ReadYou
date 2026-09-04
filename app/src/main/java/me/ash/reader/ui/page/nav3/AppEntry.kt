@@ -72,6 +72,20 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
         if (backStack.size == 1) backStack[0] = Route.Feeds else backStack.removeLastOrNull()
     }
 
+    // Editor back/cancel/save must leave the editor in a single press even
+    // if a double-tap managed to stack two equal FilterEdit entries: pop
+    // every trailing FilterEdit so one press always returns to the list.
+    val onFilterEditBack: () -> Unit = {
+        if (backStack.size == 1) {
+            backStack[0] = Route.Feeds
+        } else {
+            while (backStack.lastOrNull() is Route.FilterEdit) {
+                backStack.removeLastOrNull()
+            }
+            if (backStack.isEmpty()) backStack.add(Route.Feeds)
+        }
+    }
+
     val scaffoldDirective = calculatePaneScaffoldDirective(currentWindowAdaptiveInfo())
 
     val navigator =
@@ -125,7 +139,12 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                                     backStack.add(Route.AccountDetails(it))
                                 },
                                 navigateToFilterRules = { feedId ->
-                                    backStack.add(Route.FilterEdit(null, feedId))
+                                    val top = backStack.lastOrNull()
+                                    val next = Route.FilterEdit(null, feedId)
+                                    // Guard double-taps: identical consecutive
+                                    // FilterEdit keys would otherwise stack two
+                                    // editors and make back/cancel appear broken.
+                                    if (top != next) backStack.add(next)
                                 },
                             )
                         }
@@ -274,7 +293,15 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
                         NavEntry(key) {
                             FiltersPage(
                                 onBack = onBack,
-                                navigateToEditRule = { backStack.add(Route.FilterEdit(it)) },
+                                navigateToEditRule = { ruleId ->
+                                    val top = backStack.lastOrNull()
+                                    val next = Route.FilterEdit(ruleId)
+                                    // Guard double-taps on "+" / rule rows: pushing
+                                    // two equal FilterEdit keys stacks two editors,
+                                    // so the first tap appears to re-open the list
+                                    // and back/cancel need two presses.
+                                    if (top != next) backStack.add(next)
+                                },
                             )
                         }
                     is Route.FilterEdit ->
@@ -287,7 +314,7 @@ fun AppEntry(backStack: NavBackStack<NavKey>) {
 
                             FilterRuleEditPage(
                                 viewModel = filterViewModel,
-                                onBack = onBack,
+                                onBack = onFilterEditBack,
                             )
                         }
                     Route.Languages -> NavEntry(key) { LanguagesPage(onBack = onBack) }

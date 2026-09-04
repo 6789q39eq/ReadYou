@@ -90,6 +90,7 @@ import me.ash.reader.infrastructure.preference.LocalSortUnreadArticles
 import me.ash.reader.infrastructure.preference.PullToLoadNextFeedPreference
 import me.ash.reader.infrastructure.preference.SortUnreadArticlesPreference
 import me.ash.reader.ui.component.FilterBar
+import me.ash.reader.ui.component.FilterRuleSelectionDialog
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYExtensibleVisibility
 import me.ash.reader.ui.component.base.RYScaffold
@@ -164,6 +165,7 @@ fun FlowPage(
     val focusRequester = remember { FocusRequester() }
     var markAsRead by remember { mutableStateOf(false) }
     var onSearch by rememberSaveable { mutableStateOf(false) }
+    var filterSelectorVisible by remember { mutableStateOf(false) }
 
     var currentPullToLoadState: PullToLoadState? by remember { mutableStateOf(null) }
     var currentLoadAction: LoadAction? by remember { mutableStateOf(null) }
@@ -722,7 +724,16 @@ fun FlowPage(
                     filterBarPadding = filterBarPadding.dp,
                     filterBarTonalElevation = filterBarTonalElevation.value.dp,
                 ) {
-                    if (filterUiState.filter != it) {
+                    // Middle (Unread) is the filtered view: selecting it opens
+                    // the rule selector (user rules + unread pseudo-rule).
+                    // All (right) shows everything unfiltered, Starred (left)
+                    // is unchanged. Re-tapping middle re-opens the selector.
+                    if (it.isUnread()) {
+                        if (filterUiState.filter != it) {
+                            viewModel.changeFilter(filterUiState.copy(filter = it))
+                        }
+                        filterSelectorVisible = true
+                    } else if (filterUiState.filter != it) {
                         viewModel.changeFilter(filterUiState.copy(filter = it))
                     } else {
                         scope.launch {
@@ -733,6 +744,10 @@ fun FlowPage(
                     }
                 }
             },
+        )
+        FilterRuleSelectionDialog(
+            visible = filterSelectorVisible,
+            onDismiss = { filterSelectorVisible = false },
         )
         currentPullToLoadState?.let {
             PullToSyncIndicator(pullToLoadState = it, isSyncing = isSyncing)

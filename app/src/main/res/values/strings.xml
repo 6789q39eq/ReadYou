@@ -395,11 +395,11 @@
     <string name="filter_rule_add">Add rule</string>
     <string name="filter_rule_name">Rule name</string>
     <string name="filter_rule_action_block">Block</string>
-    <string name="filter_rule_action_block_desc">Drop matching articles at sync time</string>
+    <string name="filter_rule_action_block_desc">Drop matching articles in filtered views</string>
     <string name="filter_rule_action_allow">Allow-only</string>
-    <string name="filter_rule_action_allow_desc">Keep only articles matching allow rules</string>
+    <string name="filter_rule_action_allow_desc">Keep only matching articles in filtered views</string>
     <string name="filter_rule_delete">Delete rule</string>
-    <string name="filter_rule_delete_confirm">Delete this rule? Filtered articles are not recovered.</string>
+    <string name="filter_rule_delete_confirm">Delete this rule?</string>
     <string name="filter_rule_empty">No filter rules yet. Add one to hide unwanted articles.</string>
     <string name="filter_rule_condition_field">Field</string>
     <string name="filter_rule_condition_match_type">Match type</string>
@@ -429,4 +429,12 @@
     <string name="filter_rule_advanced_warning_body">This rule was originally a grouped expression. Editing it in simple mode will replace the grouping with a flat list of conditions. The new structure will be OR\'d for Block rules and AND\'d for Allow-only rules.</string>
     <string name="filter_rule_advanced_warning_dismiss">Got it</string>
     <string name="filter_rule_incomplete">Give the rule a name and at least one pattern first</string>
+    <string name="filter_view_title">Filtered view</string>
+    <string name="filter_view_desc">Choose which rules apply to the middle tab. All (right) stays unfiltered; Starred (left) is unchanged.</string>
+    <string name="filter_view_unread_only">Unread only</string>
+    <string name="filter_view_unread_only_desc">Show unread articles only in the filtered view</string>
+    <string name="filter_view_rules_section">Filter rules</string>
+    <string name="filter_view_empty">No filter rules yet. Create one in Settings → Filter rules.</string>
+    <string name="filter_view_clear">Clear</string>
+    <string name="filter_view_done">Done</string>
 </resources>

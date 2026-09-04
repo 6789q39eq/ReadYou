@@ -119,8 +119,11 @@ constructor(
     }
 
     private suspend fun syncFeed(feed: Feed, preDate: Date = Date()): FeedWithArticle {
+        // Non-destructive: keep every fetched article so the All tab can show
+        // everything. User filter rules are applied as view-time filters in
+        // the middle tab (see ArticlePagingListUseCase), never by dropping
+        // rows at sync time.
         val articles = rssHelper.queryRssXml(feed, "", preDate)
-            .let { applyFeedFilters(feed.accountId, feed.id, it) }
         if (feed.icon == null) {
             val iconLink = rssHelper.queryRssIconLink(feed.url)
             if (iconLink != null) {

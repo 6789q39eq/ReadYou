@@ -11,6 +11,7 @@ import me.ash.reader.domain.data.ArticlePagingListUseCase
 import me.ash.reader.domain.data.DiffMapHolder
 import me.ash.reader.domain.data.FilterStateUseCase
 import me.ash.reader.domain.data.GroupWithFeedsListUseCase
+import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.service.AccountService
 import me.ash.reader.domain.service.RssService
 import me.ash.reader.infrastructure.android.AndroidStringsHelper
@@ -30,6 +31,7 @@ object UseCaseModule {
         settingsProvider: SettingsProvider,
         filterStateUseCase: FilterStateUseCase,
         accountService: AccountService,
+        filterRuleDao: FilterRuleDao,
     ): ArticlePagingListUseCase {
         return ArticlePagingListUseCase(
             rssService,
@@ -39,6 +41,7 @@ object UseCaseModule {
             settingsProvider,
             filterStateUseCase,
             accountService,
+            filterRuleDao,
         )
     }
 

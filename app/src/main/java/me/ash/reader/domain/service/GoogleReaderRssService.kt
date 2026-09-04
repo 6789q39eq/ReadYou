@@ -78,7 +78,6 @@ constructor(
     private val workManager: WorkManager,
     private val accountService: AccountService,
     private val syncLogger: SyncLogger,
-    private val applyFeedFilters: ApplyFeedFiltersUseCase,
     private val filterRuleDao: FilterRuleDao,
 ) :
     AbstractRssRepository(
@@ -602,10 +601,9 @@ constructor(
                     unreadIds = remoteUnreadIds.await(),
                     starredIds = remoteStarredIds.await(),
                 )
-            // Dropped articles are stored as read so they do not re-enter
-            // unread counts or notifications and are not fetched repeatedly.
-            val (items, dropped) = applyFeedFilters.partition(accountId, feedId, fetched)
-            val filteredIds = dropped.map { it.id.remoteId }.toSet()
+            // Keep every fetched article; enabled rules are applied only when
+            // the article list is displayed.
+            val items = fetched
 
             if (feed.isNotification) {
                 val articlesToNotify = items.fastFilter { it.isUnread }
@@ -629,9 +627,7 @@ constructor(
             }
 
             launch {
-                // Filtered-out items are kept read locally on purpose; never
-                // flip them back to unread during reconciliation.
-                val toBeUnreadIds = localReadIds.intersect(remoteUnreadIds.await()) - filteredIds
+                val toBeUnreadIds = localReadIds.intersect(remoteUnreadIds.await())
                 toBeUnreadIds
                     .map { it.dbId(accountId) }
                     .chunked(1000)
@@ -674,9 +670,6 @@ constructor(
             }
 
             articleDao.insert(*items.toTypedArray())
-            if (dropped.isNotEmpty()) {
-                articleDao.insert(*dropped.map { it.copy(isUnread = false) }.toTypedArray())
-            }
             Timber.i("onCompletion: ${System.currentTimeMillis() - preTime}")
 
             ListenableWorker.Result.success()

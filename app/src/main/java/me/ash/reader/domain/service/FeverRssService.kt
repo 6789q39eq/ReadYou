@@ -53,7 +53,6 @@ constructor(
     @DefaultDispatcher private val defaultDispatcher: CoroutineDispatcher,
     workManager: WorkManager,
     private val accountService: AccountService,
-    private val applyFeedFilters: ApplyFeedFiltersUseCase,
     private val filterRuleDao: FilterRuleDao,
 ) :
     AbstractRssRepository(
@@ -252,10 +251,6 @@ constructor(
                             isStarred = (item.is_saved ?: 0) > 0,
                             updateAt = preDate,
                         )
-                    }.let { articles ->
-                        // A batch may mix feeds; rules apply per feed while
-                        // preserving the remote response order.
-                        applyFeedFilters.filterMixedFeeds(accountId, articles) { it.feedId }
                     }
 
                 allArticles.addAll(articlesFromBatch)

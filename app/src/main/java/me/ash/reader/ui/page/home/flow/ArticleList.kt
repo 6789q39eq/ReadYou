@@ -61,10 +61,12 @@ fun LazyListScope.ArticleList(
                 }
 
                 is ArticleFlowItem.Date -> {
-                    if (item.showSpacer) {
-                        Spacer(modifier = Modifier.height(32.dp))
+                    if (hasArticleAfter(pagingItems, index)) {
+                        if (item.showSpacer) {
+                            Spacer(modifier = Modifier.height(32.dp))
+                        }
+                        StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
                     }
-                    StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
                 }
 
                 else -> {}
@@ -96,19 +98,27 @@ fun LazyListScope.ArticleList(
                 }
 
                 is ArticleFlowItem.Date -> {
-                    if (item.showSpacer) {
-                        item { Spacer(modifier = Modifier.height(32.dp)) }
-                    }
-                    stickyHeader(key = key(item), contentType = contentType(item)) {
-                        StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
+                    if (hasArticleAfter(pagingItems, index)) {
+                        if (item.showSpacer) {
+                            item { Spacer(modifier = Modifier.height(32.dp)) }
+                        }
+                        stickyHeader(key = key(item), contentType = contentType(item)) {
+                            StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
+                        }
                     }
                 }
 
                 else -> {}
             }
+
         }
     }
 }
+
+private fun hasArticleAfter(
+    pagingItems: LazyPagingItems<ArticleFlowItem>,
+    index: Int,
+): Boolean = pagingItems.peek(index + 1) is ArticleFlowItem.Article
 
 private fun key(item: ArticleFlowItem): String {
     return when (item) {

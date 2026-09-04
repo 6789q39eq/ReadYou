@@ -76,17 +76,17 @@ constructor(
     init {
         applicationScope.launch(ioDispatcher) {
             filterStateUseCase.filterStateFlow
-                .combine(accountService.currentAccountIdFlow) { filterState, accountId ->
-                    filterState
+                .combine(accountService.currentAccountIdFlow) { filterState, _ -> filterState }
+                .combine(filterRuleDao.observeByAccount(accountService.getCurrentAccountId())) {
+                    filterState, rules ->
+                    filterState to compileEnabledRules(rules)
                 }
-                .collect { filterState ->
+                .collect { (filterState, enabledRules) ->
                     val searchContent = filterState.searchContent
                     val isMiddle = filterState.filter.isUnread()
                     val effectiveUnread =
                         if (isMiddle) filterState.unreadOnlyInFiltered
                         else filterState.filter.isUnread()
-                    val enabledRules = loadEnabledRules(accountService.getCurrentAccountId())
-
                     mutablePagerFlow.value =
                         PagerData(
                             Pager(
@@ -154,9 +154,11 @@ constructor(
         }
     }
 
-    private suspend fun loadEnabledRules(accountId: Int): EnabledRules {
-        val rules = filterRuleDao.findEnabledForAccount(accountId)
+    private fun compileEnabledRules(
+        rules: List<me.ash.reader.domain.model.filter.FilterRule>
+    ): EnabledRules {
         val compiled = rules.mapNotNull { rule ->
+            if (!rule.isEnabled) return@mapNotNull null
             rule.expressionJson.toFilterExpressionOrNull()?.let { expression ->
                 CompiledFilterRule(id = rule.id, action = rule.action, expression = expression) to
                     rule.feedId

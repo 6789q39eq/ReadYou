@@ -45,6 +45,8 @@ sdkmanager --install "platform-tools" "platforms;android-36" "build-tools;36.0.0
 #    so it stays off (equivalent of --no-daemon) and every JVM is capped.
 #    Without this, builds die with "Gradle build daemon disappeared
 #    unexpectedly" before any task runs.
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
 mkdir -p "${HOME}/.gradle"
 if ! grep -q "codespace-android" "${HOME}/.gradle/gradle.properties" 2>/dev/null; then
   if [ -f "${HOME}/.gradle/gradle.properties" ]; then
@@ -57,6 +59,30 @@ org.gradle.jvmargs=-Xmx2g -Dfile.encoding=UTF-8
 org.gradle.caching=true
 org.gradle.workers.max=2
 kotlin.daemon.jvmargs=-Xmx1g
+EOF
+fi
+
+# 5. Point Gradle at the SDK even in shells that never inherit the
+#    devcontainer remoteEnv (non-interactive shells, agent tool shells):
+#    local.properties is gitignored, so this is per-machine only.
+if ! grep -q "^sdk\.dir=${SDK_ROOT//\//\\/}$" "${REPO_DIR}/local.properties" 2>/dev/null; then
+  if [ -f "${REPO_DIR}/local.properties" ]; then
+    grep -v "^sdk\.dir=" "${REPO_DIR}/local.properties" > "${REPO_DIR}/local.properties.tmp" || true
+    mv "${REPO_DIR}/local.properties.tmp" "${REPO_DIR}/local.properties"
+  fi
+  echo "sdk.dir=${SDK_ROOT}" >> "${REPO_DIR}/local.properties"
+fi
+
+# 6. Persist the SDK env vars for every interactive shell, so sdkmanager,
+#    adb and Gradle Just Work in fresh terminals without remoteEnv.
+if ! grep -q "codespace-android-sdk" "${HOME}/.bashrc" 2>/dev/null; then
+  cat >> "${HOME}/.bashrc" <<EOF
+
+# codespace-android-sdk: Android toolchain, see .devcontainer/setup-android.sh
+export ANDROID_HOME="${SDK_ROOT}"
+export ANDROID_SDK_ROOT="${SDK_ROOT}"
+export JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64"
+export PATH="${SDK_ROOT}/cmdline-tools/latest/bin:${SDK_ROOT}/platform-tools:\$PATH"
 EOF
 fi
 

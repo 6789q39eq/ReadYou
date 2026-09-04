@@ -389,7 +389,7 @@
 
     <!-- Filter rules -->
     <string name="filter_rules">Filter rules</string>
-    <string name="filter_rules_desc">Block or allow, keywords, glob patterns</string>
+    <string name="filter_rules_desc">Block or allow using patterns</string>
     <string name="filter_rule_global">Global rules</string>
     <string name="filter_rule_feed">Feed rules</string>
     <string name="filter_rule_add">Add rule</string>
@@ -409,9 +409,10 @@
     <string name="filter_rule_condition_match_type">Match type</string>
     <string name="filter_rule_condition_pattern">Pattern</string>
     <string name="filter_rule_add_condition">Add condition</string>
-    <string name="filter_rule_combine_block">Conditions are combined with OR: any match drops the article.</string>
-    <string name="filter_rule_combine_allow">Conditions are combined with AND: all must match to keep the article.</string>
-    <string name="filter_rule_glob_help">Glob patterns: * matches any text, ? matches one character, [abc] matches one of the letters, {news,sports} matches either word. Matching is case-insensitive.</string>
+    <string name="filter_rule_combine_block">Conditions are combined with OR: any match drops the article.\n* Matches any text.\n? Matches one character.\n[abc] Matches one of the letters.\n{news,sports} Matches either word.\nMatching is case-insensitive.</string>
+    <string name="filter_rule_combine_allow">Conditions are combined with AND: all must match to keep the article.\n* Matches any text.\n? Matches one character.\n[abc] Matches one of the letters.\n{news,sports} Matches either word.\nMatching is case-insensitive.</string>
+    <string name="filter_rule_combine_block_short">OR</string>
+    <string name="filter_rule_combine_allow_short">AND</string>
     <string name="filter_field_title">Title</string>
     <string name="filter_field_author">Author</string>
     <string name="filter_field_url">URL</string>

@@ -93,6 +93,7 @@ import me.ash.reader.ui.component.FilterBar
 import me.ash.reader.ui.component.FilterPillsRow
 import me.ash.reader.ui.component.FilterRuleSelectionDialog
 import me.ash.reader.ui.component.FilterViewSelectionViewModel
+import me.ash.reader.ui.component.middleLabelFor
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYExtensibleVisibility
 import me.ash.reader.ui.component.base.RYScaffold
@@ -718,7 +719,9 @@ fun FlowPage(
             bottomBar = {
                 androidx.compose.foundation.layout.Column {
                     // Pills above the middle tab for inline rule toggling.
-                    if (filterUiState.filter.isUnread()) {
+                    // Only show when there are filter rules to choose from;
+                    // otherwise the middle view defaults to "Unread".
+                    if (filterUiState.filter.isUnread() && pillRules.any { it.isEnabled }) {
                         FilterPillsRow(
                             filterState = pillFilterState,
                             rules = pillRules.filter { it.isEnabled },
@@ -741,38 +744,11 @@ fun FlowPage(
                         filterBarFilled = true,
                         filterBarPadding = filterBarPadding.dp,
                         filterBarTonalElevation = filterBarTonalElevation.value.dp,
-                        middleLabel =
-                            if (pillFilterState.unreadOnlyInFiltered &&
-                                pillFilterState.appliedRuleIds.isEmpty()
-                            ) {
-                                null
-                            } else {
-                                stringResource(R.string.filtered)
-                            },
+                        middleLabel = middleLabelFor(pillFilterState),
                     ) {
-                        // Middle is the filtered view (already here): tapping it
-                        // scrolls to top; pills above toggle the selection.
-                        // All (right) shows everything unfiltered, Starred
-                        // (left) is unchanged.
-                        if (it.isUnread()) {
-                            if (filterUiState.filter != it) {
-                                viewModel.changeFilter(filterUiState.copy(filter = it))
-                            } else {
-                                scope.launch {
-                                    if (listState.firstVisibleItemIndex != 0) {
-                                        listState.animateScrollToItem(0)
-                                    }
-                                }
-                            }
-                        } else if (filterUiState.filter != it) {
-                            viewModel.changeFilter(filterUiState.copy(filter = it))
-                        } else {
-                            scope.launch {
-                                if (listState.firstVisibleItemIndex != 0) {
-                                    listState.animateScrollToItem(0)
-                                }
-                            }
-                        }
+                        // Tapping the already-active filter is a no-op.
+                        if (filterUiState.filter == it) return@FilterBar
+                        viewModel.changeFilter(filterUiState.copy(filter = it))
                     }
                 }
             },

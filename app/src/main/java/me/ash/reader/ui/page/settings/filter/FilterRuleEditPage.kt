@@ -182,26 +182,6 @@ fun FilterRuleEditContent(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Text(
-                    text =
-                        stringResource(
-                            if (state.action == FilterAction.BLOCK) {
-                                R.string.filter_rule_combine_block
-                            } else {
-                                R.string.filter_rule_combine_allow
-                            }
-                        ),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = stringResource(R.string.filter_rule_glob_help),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.bodySmall,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
                 state.conditions.forEachIndexed { index, condition ->
                     ConditionRow(
                         condition = condition,
@@ -226,6 +206,19 @@ fun FilterRuleEditContent(
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(text = stringResource(R.string.filter_rule_add_condition))
                 }
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text =
+                        stringResource(
+                            if (state.action == FilterAction.BLOCK) {
+                                R.string.filter_rule_combine_block
+                            } else {
+                                R.string.filter_rule_combine_allow
+                            }
+                        ),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
                 Spacer(modifier = Modifier.height(24.dp))
             }
         },

@@ -1,5 +1,10 @@
 name: "Build Commit"
-on: push
+# Branches only: this workflow creates tags below, and tag pushes must not
+# re-trigger it (that would be an infinite build loop).
+on:
+    push:
+        branches:
+            - "**"
 
 permissions:
     contents: write
@@ -25,17 +30,65 @@ jobs:
                   name: ReadYou-GitHub-Build-${{ github.sha }}
                   path: app/build/outputs/apk/github/debug/*.apk
 
-            # Rolling prerelease: every push refreshes the same release page.
-            - name: Publish APK to rolling prerelease
+            # Obtainium-friendly continuous delivery.
+            # Why this exists: Obtainium's GitHub source uses the release
+            # tag_name as the version, sorted by release publish date.
+            # A single rolling `continuous` tag therefore never yields updates:
+            # its version string never changes (and its publish date only
+            # moves when the release itself is recreated, not when assets are
+            # re-uploaded with --clobber).
+            # So every push publishes a NEW prerelease with a unique,
+            # timestamped tag (continuous-YYYYMMDD-HHMMSS-<sha>). A fresh tag
+            # + fresh publish date means Obtainium sees each push as a new
+            # version once "Include prereleases" is enabled for the app (one
+            # toggle; everything else stays default). Prereleases keep these
+            # test builds from shadowing real stable releases. Old per-build
+            # releases are pruned to the most recent few. The rolling
+            # `continuous` prerelease is still refreshed for a stable
+            # human-facing URL.
+            - name: Publish APK to Obtainium-friendly continuous releases
               env:
                   GH_TOKEN: ${{ github.token }}
               run: |
+                  set -euo pipefail
                   APK=$(ls app/build/outputs/apk/github/debug/*.apk | head -1)
+                  DATE=$(date -u +%Y%m%d-%H%M%S)
+                  SHORT_SHA=${GITHUB_SHA::8}
+                  TAG="continuous-${DATE}-${SHORT_SHA}"
+                  TITLE="Continuous build ${DATE} UTC (${SHORT_SHA})"
+                  NOTES="Side-by-side test build (me.ash.reader.debug) for commit ${GITHUB_SHA} on ${GITHUB_REF_NAME}. Debug-signed; allow installs from unknown sources when asked. Workflow run: ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}"
+
+                  # 1. Unique prerelease per push: this is what Obtainium
+                  # tracks (with "Include prereleases" enabled, new tag = new
+                  # version). Prerelease so test builds never shadow stables.
+                  gh release create "$TAG" --prerelease --target "$GITHUB_SHA" \
+                    --title "$TITLE" \
+                    --notes "$NOTES" \
+                    "$APK"
+
+                  # 2. Rolling `continuous` prerelease for a stable direct link.
                   if gh release view continuous >/dev/null 2>&1; then
+                    # Drop stale APKs first: filenames embed timestamp+hash so
+                    # --clobber alone would accumulate one asset per push.
+                    OLD_ASSETS=$(gh release view continuous --json assets --jq '.assets[].name | select(endswith(".apk"))' || true)
+                    for asset in $OLD_ASSETS; do
+                      gh release delete-asset continuous "$asset" --yes || true
+                    done
                     gh release upload continuous --clobber "$APK"
                   else
                     gh release create continuous --prerelease \
                       --title "Latest test build (continuous)" \
                       --notes "Rolling side-by-side test build (me.ash.reader.debug) refreshed on every push. Debug-signed; allow installs from unknown sources when asked." \
                       "$APK"
+                  fi
+
+                  # 3. Retention: keep only the newest per-build releases.
+                  KEEP=10
+                  OLD_TAGS=$(gh release list --limit 100 --json tagName,publishedAt --jq 'sort_by(.publishedAt) | reverse | .[].tagName | select(startswith("continuous-"))' || true)
+                  COUNT=$(printf '%s\n' "$OLD_TAGS" | grep -c . || true)
+                  if [ "$COUNT" -gt "$KEEP" ]; then
+                    printf '%s\n' "$OLD_TAGS" | tail -n +"$((KEEP + 1))" | while IFS= read -r OLD_TAG; do
+                      [ -n "$OLD_TAG" ] || continue
+                      gh release delete "$OLD_TAG" --cleanup-tag --yes || true
+                    done
                   fi

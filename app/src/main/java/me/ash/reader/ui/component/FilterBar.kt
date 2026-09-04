@@ -22,9 +22,6 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.res.stringResource
-import me.ash.reader.R
-import me.ash.reader.domain.data.FilterState
 import me.ash.reader.domain.model.general.Filter
 import me.ash.reader.infrastructure.preference.FlowFilterBarStylePreference
 import me.ash.reader.infrastructure.preference.LocalThemeIndex
@@ -39,7 +36,6 @@ fun FilterBar(
     filterBarFilled: Boolean,
     filterBarPadding: Dp,
     filterBarTonalElevation: Dp,
-    middleLabel: String? = null,
     filterOnClick: (Filter) -> Unit = {},
 ) {
     val view = LocalView.current
@@ -95,11 +91,7 @@ fun FilterBar(
                     } else {
                         {
                             Text(
-                                text = when {
-                                    item.isUnread() && middleLabel != null -> middleLabel
-                                    else -> item.toName()
-                                },
-//                            style = MaterialTheme.typography.labelLarge,
+                                text = item.toName(),
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
@@ -107,7 +99,6 @@ fun FilterBar(
                     },
                     selected = filter == item,
                     onClick = {
-//                        view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                         view.playSoundEffect(SoundEffectConstants.CLICK)
                         filterOnClick(item)
                     },
@@ -122,25 +113,5 @@ fun FilterBar(
             }
             Spacer(modifier = Modifier.width(filterBarPadding))
         }
-    }
-}
-
-/**
- * Label for the middle (Unread) tab in [FilterBar].
- *
- * - `null` when only the unread pseudo-rule is active → the tab shows
- *   the default "Unread" label.
- * - "All" when no filters are selected (unread pseudo-rule is off and no
- *   rules are applied) → the tab shows "All" because the middle view
- *   would show every article.
- * - "Filtered" when any user filter rule is applied.
- */
-@Composable
-fun middleLabelFor(filterState: FilterState): String? {
-    val hasRules = filterState.appliedRuleIds.isNotEmpty()
-    return when {
-        hasRules -> stringResource(R.string.filtered)
-        filterState.unreadOnlyInFiltered -> null
-        else -> stringResource(R.string.all)
     }
 }

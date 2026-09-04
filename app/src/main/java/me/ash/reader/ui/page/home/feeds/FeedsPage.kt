@@ -70,10 +70,6 @@ import me.ash.reader.infrastructure.preference.LocalFeedsTopBarTonalElevation
 import me.ash.reader.infrastructure.preference.LocalNewVersionNumber
 import me.ash.reader.infrastructure.preference.LocalSkipVersionNumber
 import me.ash.reader.ui.component.FilterBar
-import me.ash.reader.ui.component.FilterPillsRow
-import me.ash.reader.ui.component.FilterRuleSelectionDialog
-import me.ash.reader.ui.component.FilterViewSelectionViewModel
-import me.ash.reader.ui.component.middleLabelFor
 import me.ash.reader.ui.component.base.DisplayText
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYScaffold
@@ -107,10 +103,6 @@ fun FeedsPage(
     navigateToFilterRules: ((feedId: String?) -> Unit)? = null,
 ) {
     var accountTabVisible by remember { mutableStateOf(false) }
-    var filterSelectorVisible by remember { mutableStateOf(false) }
-    val filterSelectionViewModel: FilterViewSelectionViewModel = hiltViewModel()
-    val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
-    val pillRules = filterSelectionViewModel.rulesFlow.collectAsStateValue()
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -248,25 +240,10 @@ fun FeedsPage(
                     item {
                         FeedsBanner(
                             filter = filterState.filter,
-                            title = middleLabelFor(pillFilterState)
-                                ?: stringResource(R.string.unread),
                             desc = importantSum.ifEmpty { stringResource(R.string.loading) },
                         ) {
                             feedsViewModel.changeFilter(filterState.copy(group = null, feed = null))
                             navigationToFlow()
-                        }
-                    }
-
-                    if (pillRules.isNotEmpty()) {
-                        item {
-                            FilterPillsRow(
-                                filterState = pillFilterState,
-                                rules = pillRules,
-                                onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
-                                onToggleRule = { id, selected ->
-                                    filterSelectionViewModel.toggleRule(id, selected)
-                                },
-                            )
                         }
                     }
 
@@ -368,7 +345,6 @@ fun FeedsPage(
                 filterBarFilled = true,
                 filterBarPadding = filterBarPadding.dp,
                 filterBarTonalElevation = filterBarTonalElevation.value.dp,
-                middleLabel = middleLabelFor(pillFilterState),
             ) {
                 // Tapping the already-active filter is a no-op: don't
                 // re-push the article list route and don't change
@@ -378,11 +354,6 @@ fun FeedsPage(
                 feedsViewModel.changeFilter(filterState.copy(filter = it))
             }
         },
-    )
-
-    FilterRuleSelectionDialog(
-        visible = filterSelectorVisible,
-        onDismiss = { filterSelectorVisible = false },
     )
 
     SubscribeDialog(subscribeViewModel = subscribeViewModel)

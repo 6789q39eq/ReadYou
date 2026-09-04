@@ -90,9 +90,6 @@ import me.ash.reader.infrastructure.preference.LocalSortUnreadArticles
 import me.ash.reader.infrastructure.preference.PullToLoadNextFeedPreference
 import me.ash.reader.infrastructure.preference.SortUnreadArticlesPreference
 import me.ash.reader.ui.component.FilterBar
-import me.ash.reader.ui.component.FilterRuleSelectionDialog
-import me.ash.reader.ui.component.FilterViewSelectionViewModel
-import me.ash.reader.ui.component.middleLabelFor
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYExtensibleVisibility
 import me.ash.reader.ui.component.base.RYScaffold
@@ -167,10 +164,6 @@ fun FlowPage(
     val focusRequester = remember { FocusRequester() }
     var markAsRead by remember { mutableStateOf(false) }
     var onSearch by rememberSaveable { mutableStateOf(false) }
-    var filterSelectorVisible by remember { mutableStateOf(false) }
-    val filterSelectionViewModel: FilterViewSelectionViewModel =
-        androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
-    val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
 
     var currentPullToLoadState: PullToLoadState? by remember { mutableStateOf(null) }
     var currentLoadAction: LoadAction? by remember { mutableStateOf(null) }
@@ -728,17 +721,12 @@ fun FlowPage(
                     filterBarFilled = true,
                     filterBarPadding = filterBarPadding.dp,
                     filterBarTonalElevation = filterBarTonalElevation.value.dp,
-                    middleLabel = middleLabelFor(pillFilterState),
                 ) {
                     // Tapping the already-active filter is a no-op.
                     if (filterUiState.filter == it) return@FilterBar
                     viewModel.changeFilter(filterUiState.copy(filter = it))
                 }
             },
-        )
-        FilterRuleSelectionDialog(
-            visible = filterSelectorVisible,
-            onDismiss = { filterSelectorVisible = false },
         )
         currentPullToLoadState?.let {
             PullToSyncIndicator(pullToLoadState = it, isSyncing = isSyncing)

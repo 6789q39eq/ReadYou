@@ -12,13 +12,12 @@ import me.ash.reader.ui.component.base.Banner
 fun FeedsBanner(
     modifier: Modifier = Modifier,
     filter: Filter,
-    title: String? = null,
     desc: String? = null,
     onClick: () -> Unit = {},
 ) {
     Banner(
         modifier = modifier,
-        title = title ?: filter.toName(),
+        title = filter.toName(),
         desc = desc,
         icon = filter.iconOutline,
         action = {

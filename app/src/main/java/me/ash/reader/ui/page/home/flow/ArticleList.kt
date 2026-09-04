@@ -61,10 +61,15 @@ fun LazyListScope.ArticleList(
                 }
 
                 is ArticleFlowItem.Date -> {
-                    if (item.showSpacer) {
-                        Spacer(modifier = Modifier.height(32.dp))
+                    // Skip orphan date headers: if every article under this
+                    // header has been filtered out by a rule, the next item
+                    // (if any) is another Date or end of list.
+                    if (hasArticleAfter(index, pagingItems)) {
+                        if (item.showSpacer) {
+                            Spacer(modifier = Modifier.height(32.dp))
+                        }
+                        StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
                     }
-                    StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
                 }
 
                 else -> {}
@@ -96,11 +101,13 @@ fun LazyListScope.ArticleList(
                 }
 
                 is ArticleFlowItem.Date -> {
-                    if (item.showSpacer) {
-                        item { Spacer(modifier = Modifier.height(32.dp)) }
-                    }
-                    stickyHeader(key = key(item), contentType = contentType(item)) {
-                        StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
+                    if (hasArticleAfter(index, pagingItems)) {
+                        if (item.showSpacer) {
+                            item { Spacer(modifier = Modifier.height(32.dp)) }
+                        }
+                        stickyHeader(key = key(item), contentType = contentType(item)) {
+                            StickyHeader(item.date, isShowFeedIcon, articleListTonalElevation)
+                        }
                     }
                 }
 
@@ -108,6 +115,21 @@ fun LazyListScope.ArticleList(
             }
         }
     }
+}
+
+/**
+ * True when at least one [ArticleFlowItem.Article] appears at or after
+ * [fromIndex] in the list. Used to skip date headers that became orphans
+ * after the rule filter dropped every article under them.
+ */
+private fun hasArticleAfter(
+    fromIndex: Int,
+    pagingItems: LazyPagingItems<ArticleFlowItem>,
+): Boolean {
+    for (i in fromIndex + 1 until pagingItems.itemCount) {
+        if (pagingItems.peek(i) is ArticleFlowItem.Article) return true
+    }
+    return false
 }
 
 private fun key(item: ArticleFlowItem): String {

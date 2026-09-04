@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.update
@@ -91,17 +92,26 @@ class FeedsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            filterStateUseCase.filterStateFlow.mapLatest { it.filter }
-                .combine(accountFlow) { filter, account ->
-                    filter
+            filterStateUseCase.filterStateFlow
+                .combine(accountFlow) { filterState, _ -> filterState }
+                .mapLatest { filterState ->
+                    Triple(filterState.filter, filterState.unreadOnlyInFiltered, filterState.appliedRuleIds)
                 }
-                .collect {
+                .distinctUntilChanged()
+                .collect { (filter, unreadOnlyInFiltered, appliedRuleIds) ->
                     currentJob?.cancel()
-                    currentJob = when (it) {
-                        Filter.Unread -> pullUnreadFeeds()
-                        Filter.Starred -> pullStarredFeeds()
-                        else -> pullAllFeeds()
-                    }
+                    currentJob =
+                        if (filter.isStarred()) {
+                            pullStarredFeeds()
+                        } else if (filter.isAll()) {
+                            pullAllFeeds()
+                        } else if (appliedRuleIds.isEmpty()) {
+                            if (unreadOnlyInFiltered) pullUnreadFeeds()
+                            else pullAllFeeds()
+                        } else {
+                            if (unreadOnlyInFiltered) pullFilteredUnreadFeeds()
+                            else pullFilteredAllFeeds()
+                        }
                 }
         }
     }
@@ -155,6 +165,47 @@ class FeedsViewModel @Inject constructor(
                 }.debounce(200L).flowOn(defaultDispatcher).collect { text ->
                     _feedsUiState.update { it.copy(importantSum = text) }
                 }
+        }
+    }
+
+    @OptIn(FlowPreview::class)
+    private fun pullFilteredUnreadFeeds(): Job {
+        val unreadCountMapFlow = rssService.get().pullImportant(isStarred = false, isUnread = true)
+
+        return viewModelScope.launch {
+            diffMapHolder.diffMapSnapshotFlow
+                .combine(unreadCountMapFlow) { diffMap, unreadCountMap ->
+                    val sum = unreadCountMap.values.sum()
+                    val combinedSum =
+                        sum + diffMap.values.sumOf { if (it.isUnread) 1.toInt() else -1 }
+                    androidStringsHelper.getQuantityString(
+                        R.plurals.filtered_unread_desc,
+                        combinedSum,
+                        combinedSum,
+                    )
+                }.debounce(200L).flowOn(defaultDispatcher).collect { text ->
+                    _feedsUiState.update { it.copy(importantSum = text) }
+                }
+        }
+    }
+
+    private fun pullFilteredAllFeeds(): Job {
+        val articleCountMapFlow =
+            rssService.get().pullImportant(isStarred = false, isUnread = false)
+
+        return viewModelScope.launch {
+            launch {
+                articleCountMapFlow.mapLatest {
+                    val sum = it.values.sum()
+                    androidStringsHelper.getQuantityString(
+                        R.plurals.filtered_desc,
+                        sum,
+                        sum,
+                    )
+                }.flowOn(defaultDispatcher).collect { text ->
+                    _feedsUiState.update { it.copy(importantSum = text) }
+                }
+            }
         }
     }
 

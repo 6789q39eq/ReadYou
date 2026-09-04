@@ -16,6 +16,14 @@
         <item quantity="one">%1$d starred item</item>
         <item quantity="other">%1$d starred items</item>
     </plurals>
+    <plurals name="filtered_desc">
+        <item quantity="one">%1$d filtered item</item>
+        <item quantity="other">%1$d filtered items</item>
+    </plurals>
+    <plurals name="filtered_unread_desc">
+        <item quantity="one">%1$d filtered unread item</item>
+        <item quantity="other">%1$d filtered unread items</item>
+    </plurals>
     <string name="feeds">Feeds</string>
     <string name="syncing">Syncing…</string>
     <string name="loading">Loading…</string>

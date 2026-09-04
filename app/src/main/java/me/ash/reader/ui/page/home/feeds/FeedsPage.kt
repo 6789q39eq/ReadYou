@@ -372,12 +372,10 @@ fun FeedsPage(
             ) {
                 // Tapping the already-active filter is a no-op: don't
                 // re-push the article list route and don't change
-                // the filter.
+                // the filter. The user navigates to FlowPage via the
+                // large banner above.
                 if (filterState.filter == it) return@FilterBar
                 feedsViewModel.changeFilter(filterState.copy(filter = it))
-                if (it.isUnread()) {
-                    navigationToFlow()
-                }
             }
         },
     )

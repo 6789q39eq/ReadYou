@@ -47,6 +47,22 @@ constructor(
     private val _availableFeeds = MutableStateFlow<List<Feed>>(emptyList())
     val availableFeeds: StateFlow<List<Feed>> = _availableFeeds.asStateFlow()
 
+    /**
+     * Loads the account's feeds into [availableFeeds]. Idempotent — subsequent
+     * calls are no-ops once feeds have been loaded. Used by the rule list
+     * page so it can group per-feed rules by feed name.
+     */
+    fun ensureFeedsLoaded() {
+        if (_availableFeeds.value.isNotEmpty()) return
+        viewModelScope.launch(ioDispatcher) {
+            _availableFeeds.value =
+                runCatching { feedDao.queryAll(accountService.getCurrentAccountId()) }
+                    .getOrNull()
+                    .orEmpty()
+                    .sortedBy { it.name.lowercase() }
+        }
+    }
+
     /** All rules for the current account, ordered by creation time. */
     val rules: StateFlow<List<FilterRule>> =
         filterRuleDao.observeByAccount(accountService.getCurrentAccountId())

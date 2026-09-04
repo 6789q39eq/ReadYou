@@ -14,13 +14,15 @@ import me.ash.reader.domain.model.filter.FilterRule
 import me.ash.reader.ui.component.base.RYSelectionChip
 
 /**
- * Quick-toggle pills shown above the middle (filtered-view) tab.
+ * Quick-toggle pills shown above the large Unread button on the home feeds
+ * page.
  *
  * Mirrors the chip style used in the feed long-press sheet
  * ([me.ash.reader.ui.page.home.feeds.FeedOptionView]): one pill for the
  * unread pseudo-rule plus one pill per enabled filter rule. Tapping a pill
- * toggles just that entry so the filtered view can be adjusted inline
- * without opening [FilterRuleSelectionDialog].
+ * toggles just that selection so the filtered view can be adjusted inline
+ * without opening [FilterRuleSelectionDialog]. The unread pseudo-pill is
+ * selected by default.
  */
 @Composable
 fun FilterPillsRow(

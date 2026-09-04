@@ -70,6 +70,7 @@ import me.ash.reader.infrastructure.preference.LocalFeedsTopBarTonalElevation
 import me.ash.reader.infrastructure.preference.LocalNewVersionNumber
 import me.ash.reader.infrastructure.preference.LocalSkipVersionNumber
 import me.ash.reader.ui.component.FilterBar
+import me.ash.reader.ui.component.FilterPillsRow
 import me.ash.reader.ui.component.FilterRuleSelectionDialog
 import me.ash.reader.ui.component.FilterViewSelectionViewModel
 import me.ash.reader.ui.component.middleLabelFor
@@ -109,6 +110,7 @@ fun FeedsPage(
     var filterSelectorVisible by remember { mutableStateOf(false) }
     val filterSelectionViewModel: FilterViewSelectionViewModel = hiltViewModel()
     val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
+    val pillRules = filterSelectionViewModel.rulesFlow.collectAsStateValue()
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -246,10 +248,25 @@ fun FeedsPage(
                     item {
                         FeedsBanner(
                             filter = filterState.filter,
+                            title = middleLabelFor(pillFilterState)
+                                ?: stringResource(R.string.unread),
                             desc = importantSum.ifEmpty { stringResource(R.string.loading) },
                         ) {
                             feedsViewModel.changeFilter(filterState.copy(group = null, feed = null))
                             navigationToFlow()
+                        }
+                    }
+
+                    if (pillRules.isNotEmpty()) {
+                        item {
+                            FilterPillsRow(
+                                filterState = pillFilterState,
+                                rules = pillRules,
+                                onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
+                                onToggleRule = { id, selected ->
+                                    filterSelectionViewModel.toggleRule(id, selected)
+                                },
+                            )
                         }
                     }
 

@@ -415,7 +415,7 @@
     <string name="filter_field_author">Author</string>
     <string name="filter_field_url">URL</string>
     <string name="filter_field_content">Content</string>
-    <string name="filter_field_all">All fields</string>
+    <string name="filter_field_all">Any field</string>
     <string name="filter_match_type_glob">matches</string>
     <string name="filter_match_type_not_glob">doesn\'t match</string>
     <string name="filter_match_type_contains">contains</string>

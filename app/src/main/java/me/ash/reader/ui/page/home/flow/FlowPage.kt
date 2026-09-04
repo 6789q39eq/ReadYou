@@ -90,7 +90,6 @@ import me.ash.reader.infrastructure.preference.LocalSortUnreadArticles
 import me.ash.reader.infrastructure.preference.PullToLoadNextFeedPreference
 import me.ash.reader.infrastructure.preference.SortUnreadArticlesPreference
 import me.ash.reader.ui.component.FilterBar
-import me.ash.reader.ui.component.FilterPillsRow
 import me.ash.reader.ui.component.FilterRuleSelectionDialog
 import me.ash.reader.ui.component.FilterViewSelectionViewModel
 import me.ash.reader.ui.component.middleLabelFor
@@ -171,7 +170,6 @@ fun FlowPage(
     var filterSelectorVisible by remember { mutableStateOf(false) }
     val filterSelectionViewModel: FilterViewSelectionViewModel =
         androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
-    val pillRules = filterSelectionViewModel.rulesFlow.collectAsStateValue()
     val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
 
     var currentPullToLoadState: PullToLoadState? by remember { mutableStateOf(null) }
@@ -717,39 +715,24 @@ fun FlowPage(
             },
             floatingActionButtonPosition = FabPosition.Center,
             bottomBar = {
-                androidx.compose.foundation.layout.Column {
-                    // Pills above the middle tab for inline rule toggling.
-                    // Only show when at least one filter rule exists; the
-                    // middle view itself defaults to "Unread".
-                    if (filterUiState.filter.isUnread() && pillRules.isNotEmpty()) {
-                        FilterPillsRow(
-                            filterState = pillFilterState,
-                            rules = pillRules,
-                            onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
-                            onToggleRule = { id, selected ->
-                                filterSelectionViewModel.toggleRule(id, selected)
-                            },
-                        )
-                    }
-                    FilterBar(
-                        modifier =
-                            with(sharedTransitionScope) {
-                                Modifier.sharedElement(
-                                    sharedContentState = rememberSharedContentState("filterBar"),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                )
-                            },
-                        filter = filterUiState.filter,
-                        filterBarStyle = filterBarStyle.value,
-                        filterBarFilled = true,
-                        filterBarPadding = filterBarPadding.dp,
-                        filterBarTonalElevation = filterBarTonalElevation.value.dp,
-                        middleLabel = middleLabelFor(pillFilterState),
-                    ) {
-                        // Tapping the already-active filter is a no-op.
-                        if (filterUiState.filter == it) return@FilterBar
-                        viewModel.changeFilter(filterUiState.copy(filter = it))
-                    }
+                FilterBar(
+                    modifier =
+                        with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState("filterBar"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+                        },
+                    filter = filterUiState.filter,
+                    filterBarStyle = filterBarStyle.value,
+                    filterBarFilled = true,
+                    filterBarPadding = filterBarPadding.dp,
+                    filterBarTonalElevation = filterBarTonalElevation.value.dp,
+                    middleLabel = middleLabelFor(pillFilterState),
+                ) {
+                    // Tapping the already-active filter is a no-op.
+                    if (filterUiState.filter == it) return@FilterBar
+                    viewModel.changeFilter(filterUiState.copy(filter = it))
                 }
             },
         )

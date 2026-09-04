@@ -19,6 +19,7 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -29,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import me.ash.reader.R
+import me.ash.reader.domain.model.feed.Feed
 import me.ash.reader.domain.model.filter.FilterAction
 import me.ash.reader.domain.model.filter.FilterRule
 import me.ash.reader.ui.component.base.DisplayText
@@ -82,6 +84,8 @@ fun FiltersListContent(
     onDeleteRequest: (FilterRule) -> Unit,
 ) {
     val rules by viewModel.rules.collectAsStateWithLifecycle()
+    val feeds by viewModel.availableFeeds.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { viewModel.ensureFeedsLoaded() }
 
     RYScaffold(
         containerColor =
@@ -104,8 +108,15 @@ fun FiltersListContent(
             }
         },
         content = {
-            val (globalRules, feedRules) =
-                remember(rules) { rules.partition { it.feedId == null } }
+            val globalRules = rules.filter { it.feedId == null }
+            // Per-feed rules grouped by feedId, in feed order (alphabetical
+            // by feed name). Feeds without any rule are skipped.
+            val perFeedGroups: List<Pair<Feed, List<FilterRule>>> =
+                feeds
+                    .map { feed ->
+                        feed to rules.filter { it.feedId == feed.id }
+                    }
+                    .filter { (_, rulesForFeed) -> rulesForFeed.isNotEmpty() }
             LazyColumn {
                 item {
                     DisplayText(text = stringResource(R.string.filter_rules), desc = "")
@@ -138,10 +149,10 @@ fun FiltersListContent(
                             )
                         }
                     }
-                    if (feedRules.isNotEmpty()) {
+                    perFeedGroups.forEach { (feed, feedRules) ->
                         item {
                             Subtitle(
-                                text = stringResource(R.string.filter_rule_feed),
+                                text = feed.name,
                                 modifier = Modifier.padding(horizontal = 20.dp),
                             )
                         }

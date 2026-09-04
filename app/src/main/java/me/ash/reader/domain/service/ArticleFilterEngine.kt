@@ -157,18 +157,11 @@ object ArticleFilterEngine {
                 expression.children.none { matches(article, it, regexes) }
         }
 
-    private fun valueFor(article: ArticleSnapshot, field: FilterField): String =
-        when (field) {
-            FilterField.TITLE -> article.title
-            FilterField.AUTHOR -> article.author.orEmpty()
-            FilterField.URL -> article.link
-            FilterField.CONTENT -> article.content
-            FilterField.ALL -> article.title
-        }
-
     /**
      * All values a condition applies to. [FilterField.ALL] covers title,
-     * author and content (URL is intentionally excluded).
+     * author and content (URL is intentionally excluded); a condition with
+     * [FilterField.ALL] matches when any of those values matches the pattern,
+     * and its negation matches when none of them matches.
      */
     private fun valuesFor(article: ArticleSnapshot, field: FilterField): List<String> =
         when (field) {

@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapLatest
@@ -23,7 +24,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import me.ash.reader.R
 import me.ash.reader.domain.model.account.Account
+import me.ash.reader.domain.model.article.Article
+import me.ash.reader.domain.model.filter.toFilterExpressionOrNull
 import me.ash.reader.domain.model.general.Filter
+import me.ash.reader.domain.repository.ArticleDao
+import me.ash.reader.domain.repository.FilterRuleDao
+import me.ash.reader.domain.service.ArticleFilterEngine
+import me.ash.reader.domain.service.ArticleSnapshot
+import me.ash.reader.domain.service.CompiledFilterRule
 import me.ash.reader.domain.service.AccountService
 import me.ash.reader.domain.service.RssService
 import me.ash.reader.infrastructure.android.AndroidStringsHelper
@@ -57,6 +65,8 @@ class FeedsViewModel @Inject constructor(
     private val diffMapHolder: DiffMapHolder,
     private val filterStateUseCase: FilterStateUseCase,
     private val groupWithFeedsListUseCase: GroupWithFeedsListUseCase,
+    private val articleDao: ArticleDao,
+    private val filterRuleDao: FilterRuleDao,
 ) : ViewModel() {
 
     private val _feedsUiState =
@@ -91,19 +101,74 @@ class FeedsViewModel @Inject constructor(
             }
         }
         viewModelScope.launch {
-            filterStateUseCase.filterStateFlow.mapLatest { it.filter }
-                .combine(accountFlow) { filter, account ->
-                    filter
-                }
-                .collect {
-                    currentJob?.cancel()
-                    currentJob = when (it) {
-                        Filter.Unread -> pullUnreadFeeds()
-                        Filter.Starred -> pullStarredFeeds()
-                        else -> pullAllFeeds()
-                    }
-                }
+            combine(filterStateUseCase.filterStateFlow, accountFlow) { state, account ->
+                state.filter
+            }.distinctUntilChanged().collect {
+                currentJob?.cancel()
+                currentJob = pullFilteredCount(it)
+            }
         }
+    }
+
+    private fun pullFilteredCount(filter: Filter): Job {
+        return viewModelScope.launch {
+            combine(
+                articleDao.queryAllArticles(accountService.getCurrentAccountId()),
+                filterRuleDao.observeByAccount(accountService.getCurrentAccountId()),
+                diffMapHolder.diffMapSnapshotFlow,
+            ) { articles, rules, diffs ->
+                val enabledRules = compileRules(rules)
+                val count =
+                    articles.count { article ->
+                        val isUnread = diffs[article.id]?.isUnread ?: article.isUnread
+                        val matchesState =
+                            when (filter) {
+                                Filter.Unread -> isUnread
+                                Filter.Starred -> article.isStarred
+                                else -> true
+                            }
+                        matchesState &&
+                            ArticleFilterEngine.shouldKeep(
+                                article.toSnapshot(),
+                                enabledRules.forFeed(article.feedId),
+                            )
+                    }
+                androidStringsHelper.getQuantityString(
+                    when (filter) {
+                        Filter.Unread -> R.plurals.unread_desc
+                        Filter.Starred -> R.plurals.starred_desc
+                        else -> R.plurals.all_desc
+                    },
+                    count,
+                    count,
+                )
+            }.flowOn(defaultDispatcher).collect { text ->
+                _feedsUiState.update { it.copy(importantSum = text) }
+            }
+        }
+    }
+
+    private fun compileRules(rules: List<me.ash.reader.domain.model.filter.FilterRule>): EnabledRules {
+        val compiled = rules.filter { it.isEnabled }.mapNotNull { rule ->
+            rule.expressionJson.toFilterExpressionOrNull()?.let { expression ->
+                CompiledFilterRule(rule.id, rule.action, expression) to rule.feedId
+            }
+        }
+        val global = compiled.filter { it.second == null }.map { it.first }
+        val perFeed = compiled.mapNotNull { (rule, feedId) ->
+            feedId?.let { it to rule }
+        }.groupBy({ it.first }, { it.second })
+        return EnabledRules(global, perFeed)
+    }
+
+    private fun Article.toSnapshot() = ArticleSnapshot(title, author, link, shortDescription)
+
+    private data class EnabledRules(
+        val global: List<CompiledFilterRule>,
+        val perFeed: Map<String, List<CompiledFilterRule>>,
+    ) {
+        fun forFeed(feedId: String): List<CompiledFilterRule> =
+            global + perFeed[feedId].orEmpty()
     }
 
     private fun pullAllFeeds(): Job {

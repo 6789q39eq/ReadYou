@@ -120,21 +120,20 @@ constructor(
                                     }
                                 }
                                 .flow
-                                .map { it.mapPagingFlowItem(androidStringsHelper) }
                                 .map { pagingData ->
                                     if (enabledRules.isEmpty) pagingData
                                     else {
                                         pagingData.filter { item ->
-                                            if (item is ArticleFlowItem.Article) {
-                                                val a = item.articleWithFeed.article
+                                            val a = item
+                                            if (a is me.ash.reader.domain.model.article.ArticleWithFeed) {
                                                 ArticleFilterEngine.shouldKeep(
                                                     ArticleSnapshot(
-                                                        title = a.title,
-                                                        author = a.author,
-                                                        link = a.link,
-                                                        content = a.shortDescription,
+                                                        title = a.article.title,
+                                                        author = a.article.author,
+                                                        link = a.article.link,
+                                                        content = a.article.shortDescription,
                                                     ),
-                                                    enabledRules.forFeed(a.feedId),
+                                                    enabledRules.forFeed(a.article.feedId),
                                                 )
                                             } else {
                                                 true
@@ -142,6 +141,7 @@ constructor(
                                         }
                                     }
                                 }
+                                .map { it.mapPagingFlowItem(androidStringsHelper) }
                                 .cachedIn(applicationScope),
                             filterState = filterState,
                         )

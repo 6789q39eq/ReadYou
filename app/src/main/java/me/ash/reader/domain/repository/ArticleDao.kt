@@ -699,6 +699,9 @@ interface ArticleDao {
         accountId: Int, sortAscending: Boolean = false
     ): List<ArticleMeta>
 
+    @Query("SELECT * FROM article WHERE accountId = :accountId")
+    fun queryAllArticles(accountId: Int): Flow<List<Article>>
+
     @Transaction
     @Query(
         """

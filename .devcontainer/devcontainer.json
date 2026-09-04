@@ -17,5 +17,16 @@
     "ANDROID_SDK_ROOT": "/opt/android-sdk",
     "JAVA_HOME": "/usr/lib/jvm/java-17-openjdk-amd64",
     "PATH": "${containerEnv:PATH}:/home/vscode/.opencode/bin:/opt/android-sdk/cmdline-tools/latest/bin:/opt/android-sdk/platform-tools"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/android-sdk:1": {
+      "version": "latest"
+    },
+    "ghcr.io/devcontainers/features/java:1": {
+      "version": "17"
+    },
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
+    }
   }
 }

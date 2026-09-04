@@ -70,7 +70,9 @@ import me.ash.reader.infrastructure.preference.LocalFeedsTopBarTonalElevation
 import me.ash.reader.infrastructure.preference.LocalNewVersionNumber
 import me.ash.reader.infrastructure.preference.LocalSkipVersionNumber
 import me.ash.reader.ui.component.FilterBar
+import me.ash.reader.ui.component.FilterPillsRow
 import me.ash.reader.ui.component.FilterRuleSelectionDialog
+import me.ash.reader.ui.component.FilterViewSelectionViewModel
 import me.ash.reader.ui.component.base.DisplayText
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYScaffold
@@ -105,6 +107,9 @@ fun FeedsPage(
 ) {
     var accountTabVisible by remember { mutableStateOf(false) }
     var filterSelectorVisible by remember { mutableStateOf(false) }
+    val filterSelectionViewModel: FilterViewSelectionViewModel = hiltViewModel()
+    val pillRules = filterSelectionViewModel.rulesFlow.collectAsStateValue()
+    val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
 
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -334,30 +339,47 @@ fun FeedsPage(
             }
         },
         bottomBar = {
-            FilterBar(
-                modifier =
-                    with(sharedTransitionScope) {
-                        Modifier.sharedElement(
-                            sharedContentState = rememberSharedContentState("filterBar"),
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    },
-                filter = filterState.filter,
-                filterBarStyle = filterBarStyle.value,
-                filterBarFilled = true,
-                filterBarPadding = filterBarPadding.dp,
-                filterBarTonalElevation = filterBarTonalElevation.value.dp,
-            ) {
-                // Left (Starred) unchanged, right (All) shows everything
-                // unfiltered. Middle (Unread) is the filtered view: switching
-                // to it also opens the rule selector (selected rules + unread
-                // pseudo-rule). Tapping middle while already there re-opens
-                // the selector so the selection can be changed.
-                if (it.isUnread()) {
+            androidx.compose.foundation.layout.Column {
+                // Pills above the middle tab: quick-toggle unread + rules.
+                if (filterState.filter.isUnread()) {
+                    FilterPillsRow(
+                        filterState = pillFilterState,
+                        rules = pillRules.filter { it.isEnabled },
+                        onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
+                        onToggleRule = { id, selected ->
+                            filterSelectionViewModel.toggleRule(id, selected)
+                        },
+                    )
+                }
+                FilterBar(
+                    modifier =
+                        with(sharedTransitionScope) {
+                            Modifier.sharedElement(
+                                sharedContentState = rememberSharedContentState("filterBar"),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            )
+                        },
+                    filter = filterState.filter,
+                    filterBarStyle = filterBarStyle.value,
+                    filterBarFilled = true,
+                    filterBarPadding = filterBarPadding.dp,
+                    filterBarTonalElevation = filterBarTonalElevation.value.dp,
+                    middleLabel =
+                        if (pillFilterState.unreadOnlyInFiltered &&
+                            pillFilterState.appliedRuleIds.isEmpty()
+                        ) {
+                            null
+                        } else {
+                            stringResource(R.string.filtered)
+                        },
+                ) {
+                    // Left (Starred) unchanged, right (All) shows everything
+                    // unfiltered. Middle is the filtered view: tapping it
+                    // opens the filtered feed (article list).
                     feedsViewModel.changeFilter(filterState.copy(filter = it))
-                    filterSelectorVisible = true
-                } else {
-                    feedsViewModel.changeFilter(filterState.copy(filter = it))
+                    if (it.isUnread()) {
+                        navigationToFlow()
+                    }
                 }
             }
         },

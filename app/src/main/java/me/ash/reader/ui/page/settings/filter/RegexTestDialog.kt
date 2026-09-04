@@ -27,7 +27,7 @@ import me.ash.reader.ui.component.base.RYDialog
  * Live "try your pattern" box: paste a sample title/content and instantly see
  * whether the current conditions would match it. The summary line shows how
  * the per-condition results combine under the rule's [action] (OR for Block,
- * AND for Allow-only) so the dialog agrees with the engine's evaluation.
+ * AND for Allow) so the dialog agrees with the engine's evaluation.
  */
 @Composable
 fun RegexTestDialog(

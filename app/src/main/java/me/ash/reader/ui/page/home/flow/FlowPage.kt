@@ -90,7 +90,9 @@ import me.ash.reader.infrastructure.preference.LocalSortUnreadArticles
 import me.ash.reader.infrastructure.preference.PullToLoadNextFeedPreference
 import me.ash.reader.infrastructure.preference.SortUnreadArticlesPreference
 import me.ash.reader.ui.component.FilterBar
+import me.ash.reader.ui.component.FilterPillsRow
 import me.ash.reader.ui.component.FilterRuleSelectionDialog
+import me.ash.reader.ui.component.FilterViewSelectionViewModel
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYExtensibleVisibility
 import me.ash.reader.ui.component.base.RYScaffold
@@ -166,6 +168,10 @@ fun FlowPage(
     var markAsRead by remember { mutableStateOf(false) }
     var onSearch by rememberSaveable { mutableStateOf(false) }
     var filterSelectorVisible by remember { mutableStateOf(false) }
+    val filterSelectionViewModel: FilterViewSelectionViewModel =
+        androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
+    val pillRules = filterSelectionViewModel.rulesFlow.collectAsStateValue()
+    val pillFilterState = filterSelectionViewModel.filterStateFlow.collectAsStateValue()
 
     var currentPullToLoadState: PullToLoadState? by remember { mutableStateOf(null) }
     var currentLoadAction: LoadAction? by remember { mutableStateOf(null) }
@@ -710,35 +716,61 @@ fun FlowPage(
             },
             floatingActionButtonPosition = FabPosition.Center,
             bottomBar = {
-                FilterBar(
-                    modifier =
-                        with(sharedTransitionScope) {
-                            Modifier.sharedElement(
-                                sharedContentState = rememberSharedContentState("filterBar"),
-                                animatedVisibilityScope = animatedVisibilityScope,
-                            )
-                        },
-                    filter = filterUiState.filter,
-                    filterBarStyle = filterBarStyle.value,
-                    filterBarFilled = true,
-                    filterBarPadding = filterBarPadding.dp,
-                    filterBarTonalElevation = filterBarTonalElevation.value.dp,
-                ) {
-                    // Middle (Unread) is the filtered view: selecting it opens
-                    // the rule selector (user rules + unread pseudo-rule).
-                    // All (right) shows everything unfiltered, Starred (left)
-                    // is unchanged. Re-tapping middle re-opens the selector.
-                    if (it.isUnread()) {
-                        if (filterUiState.filter != it) {
+                androidx.compose.foundation.layout.Column {
+                    // Pills above the middle tab for inline rule toggling.
+                    if (filterUiState.filter.isUnread()) {
+                        FilterPillsRow(
+                            filterState = pillFilterState,
+                            rules = pillRules.filter { it.isEnabled },
+                            onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
+                            onToggleRule = { id, selected ->
+                                filterSelectionViewModel.toggleRule(id, selected)
+                            },
+                        )
+                    }
+                    FilterBar(
+                        modifier =
+                            with(sharedTransitionScope) {
+                                Modifier.sharedElement(
+                                    sharedContentState = rememberSharedContentState("filterBar"),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                )
+                            },
+                        filter = filterUiState.filter,
+                        filterBarStyle = filterBarStyle.value,
+                        filterBarFilled = true,
+                        filterBarPadding = filterBarPadding.dp,
+                        filterBarTonalElevation = filterBarTonalElevation.value.dp,
+                        middleLabel =
+                            if (pillFilterState.unreadOnlyInFiltered &&
+                                pillFilterState.appliedRuleIds.isEmpty()
+                            ) {
+                                null
+                            } else {
+                                stringResource(R.string.filtered)
+                            },
+                    ) {
+                        // Middle is the filtered view (already here): tapping it
+                        // scrolls to top; pills above toggle the selection.
+                        // All (right) shows everything unfiltered, Starred
+                        // (left) is unchanged.
+                        if (it.isUnread()) {
+                            if (filterUiState.filter != it) {
+                                viewModel.changeFilter(filterUiState.copy(filter = it))
+                            } else {
+                                scope.launch {
+                                    if (listState.firstVisibleItemIndex != 0) {
+                                        listState.animateScrollToItem(0)
+                                    }
+                                }
+                            }
+                        } else if (filterUiState.filter != it) {
                             viewModel.changeFilter(filterUiState.copy(filter = it))
-                        }
-                        filterSelectorVisible = true
-                    } else if (filterUiState.filter != it) {
-                        viewModel.changeFilter(filterUiState.copy(filter = it))
-                    } else {
-                        scope.launch {
-                            if (listState.firstVisibleItemIndex != 0) {
-                                listState.animateScrollToItem(0)
+                        } else {
+                            scope.launch {
+                                if (listState.firstVisibleItemIndex != 0) {
+                                    listState.animateScrollToItem(0)
+                                }
                             }
                         }
                     }

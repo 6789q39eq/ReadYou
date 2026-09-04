@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import me.ash.reader.domain.model.feed.Feed
 import me.ash.reader.domain.model.filter.FilterAction
 import me.ash.reader.domain.model.filter.FilterCondition
 import me.ash.reader.domain.model.filter.FilterExpression
@@ -23,6 +24,7 @@ import me.ash.reader.domain.model.filter.FilterMatchType
 import me.ash.reader.domain.model.filter.FilterRule
 import me.ash.reader.domain.model.filter.toJson
 import me.ash.reader.domain.model.filter.toFilterExpressionOrNull
+import me.ash.reader.domain.repository.FeedDao
 import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.service.AccountService
 import me.ash.reader.infrastructure.di.IODispatcher
@@ -33,12 +35,17 @@ class FilterRuleViewModel
 @Inject
 constructor(
     private val filterRuleDao: FilterRuleDao,
+    private val feedDao: FeedDao,
     private val accountService: AccountService,
     @IODispatcher private val ioDispatcher: CoroutineDispatcher,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(FilterRuleUiState())
     val uiState: StateFlow<FilterRuleUiState> = _uiState.asStateFlow()
+
+    /** Feeds of the current account, for the "Applies to" scope selector. */
+    private val _availableFeeds = MutableStateFlow<List<Feed>>(emptyList())
+    val availableFeeds: StateFlow<List<Feed>> = _availableFeeds.asStateFlow()
 
     /** All rules for the current account, ordered by creation time. */
     val rules: StateFlow<List<FilterRule>> =
@@ -55,6 +62,11 @@ constructor(
         loadJob?.cancel()
         loadJob =
             viewModelScope.launch(ioDispatcher) {
+                _availableFeeds.value =
+                    runCatching { feedDao.queryAll(accountService.getCurrentAccountId()) }
+                        .getOrNull()
+                        .orEmpty()
+                        .sortedBy { it.name.lowercase() }
                 if (ruleId == null) {
                     _uiState.update {
                         FilterRuleUiState(
@@ -65,8 +77,8 @@ constructor(
                             conditions =
                                 listOf(
                                     EditableCondition(
-                                        field = FilterField.TITLE,
-                                        matchType = FilterMatchType.CONTAINS,
+                                        field = FilterField.ALL,
+                                        matchType = FilterMatchType.GLOB,
                                         pattern = "",
                                     )
                                 ),
@@ -110,6 +122,8 @@ constructor(
 
     fun updateAction(action: FilterAction) = _uiState.update { it.copy(action = action) }
 
+    fun updateFeedId(feedId: String?) = _uiState.update { it.copy(feedId = feedId) }
+
     fun updateCondition(index: Int, condition: EditableCondition) =
         _uiState.update { state ->
             state.copy(
@@ -124,8 +138,8 @@ constructor(
                 conditions =
                     state.conditions +
                         EditableCondition(
-                            field = FilterField.TITLE,
-                            matchType = FilterMatchType.CONTAINS,
+                            field = FilterField.ALL,
+                            matchType = FilterMatchType.GLOB,
                             pattern = "",
                         )
             )
@@ -201,8 +215,8 @@ constructor(
 
 /** One condition row in the editor, kept editable until save. */
 data class EditableCondition(
-    val field: FilterField = FilterField.TITLE,
-    val matchType: FilterMatchType = FilterMatchType.CONTAINS,
+    val field: FilterField = FilterField.ALL,
+    val matchType: FilterMatchType = FilterMatchType.GLOB,
     val pattern: String = "",
 )
 
@@ -236,17 +250,32 @@ data class FilterRuleUiState(
  * the user (via [FilterRuleUiState.isAdvancedRule]) when this happens and
  * preserves [FilterRuleUiState.originalExpressionJson] so callers can detect
  * the case.
+ *
+ * Legacy match types are mapped onto glob so the editor only ever shows
+ * [FilterMatchType.GLOB]/[FilterMatchType.NOT_GLOB]: contains/regex/word
+ * become [GLOB], their negations become [NOT_GLOB].
  */
 internal fun FilterExpression.flattenToConditions(): List<EditableCondition> =
     when (this) {
-        is FilterExpression.Condition ->
-            listOf(
-                EditableCondition(condition.field, condition.matchType, condition.pattern)
-            )
+        is FilterExpression.Condition -> listOf(condition.toEditable())
         is FilterExpression.AllOf -> children.flatMap { it.flattenToConditions() }
         is FilterExpression.AnyOf -> children.flatMap { it.flattenToConditions() }
         is FilterExpression.NoneOf -> children.flatMap { it.flattenToConditions() }
     }
+
+internal fun FilterCondition.toEditable(): EditableCondition {
+    val matchType =
+        when (matchType) {
+            FilterMatchType.GLOB -> FilterMatchType.GLOB
+            FilterMatchType.NOT_GLOB -> FilterMatchType.NOT_GLOB
+            FilterMatchType.CONTAINS,
+            FilterMatchType.WORD_MATCH,
+            FilterMatchType.REGEX -> FilterMatchType.GLOB
+            FilterMatchType.NOT_CONTAINS,
+            FilterMatchType.NOT_REGEX -> FilterMatchType.NOT_GLOB
+        }
+    return EditableCondition(field, matchType, pattern)
+}
 
 /**
  * True when [this] can be losslessly edited in simple mode: a single leaf

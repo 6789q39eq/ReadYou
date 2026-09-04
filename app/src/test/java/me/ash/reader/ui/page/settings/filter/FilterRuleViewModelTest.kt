@@ -105,4 +105,28 @@ class FilterRuleViewModelTest {
         val expr = FilterExpression.simple(conditions, FilterAction.ALLOW)
         assertTrue("ALLOW should AND conditions", expr is FilterExpression.AllOf)
     }
+
+    @Test
+    fun `legacy match types map onto glob when flattened`() {
+        val legacy =
+            listOf(
+                FilterCondition(FilterField.TITLE, FilterMatchType.CONTAINS, "a"),
+                FilterCondition(FilterField.TITLE, FilterMatchType.NOT_CONTAINS, "b"),
+                FilterCondition(FilterField.TITLE, FilterMatchType.REGEX, "c"),
+                FilterCondition(FilterField.TITLE, FilterMatchType.NOT_REGEX, "d"),
+                FilterCondition(FilterField.TITLE, FilterMatchType.WORD_MATCH, "e"),
+            )
+        val flat = FilterExpression.AnyOf(legacy.map { FilterExpression.Condition(it) })
+            .flattenToConditions()
+        assertEquals(
+            listOf(
+                FilterMatchType.GLOB,
+                FilterMatchType.NOT_GLOB,
+                FilterMatchType.GLOB,
+                FilterMatchType.NOT_GLOB,
+                FilterMatchType.GLOB,
+            ),
+            flat.map { it.matchType },
+        )
+    }
 }

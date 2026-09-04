@@ -42,6 +42,7 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import me.ash.reader.R
+import me.ash.reader.domain.model.feed.Feed
 import me.ash.reader.domain.model.filter.FilterAction
 import me.ash.reader.domain.model.filter.FilterField
 import me.ash.reader.domain.model.filter.FilterMatchType
@@ -49,7 +50,6 @@ import me.ash.reader.domain.service.ArticleFilterEngine
 import me.ash.reader.ui.component.base.FeedbackIconButton
 import me.ash.reader.ui.component.base.RYDialog
 import me.ash.reader.ui.component.base.RYScaffold
-import me.ash.reader.ui.component.base.Subtitle
 import me.ash.reader.ui.ext.showToast
 
 /**
@@ -69,6 +69,7 @@ fun FilterRuleEditContent(
     onBack: () -> Unit,
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val feeds by viewModel.availableFeeds.collectAsStateWithLifecycle()
     var showTestDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -113,10 +114,6 @@ fun FilterRuleEditContent(
         },
         content = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                Subtitle(
-                    text = stringResource(R.string.filter_rule_name),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                )
                 OutlinedTextField(
                     value = state.name,
                     onValueChange = viewModel::updateName,
@@ -126,10 +123,26 @@ fun FilterRuleEditContent(
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Subtitle(
-                    text = stringResource(R.string.filter_rules),
-                    modifier = Modifier.padding(horizontal = 20.dp),
+                FeedScopeDropdown(
+                    feeds = feeds,
+                    selectedFeedId = state.feedId,
+                    onSelect = viewModel::updateFeedId,
                 )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text =
+                        stringResource(
+                            if (state.feedId == null) {
+                                R.string.filter_rule_scope_global_desc
+                            } else {
+                                R.string.filter_rule_scope_feed_desc
+                            }
+                        ),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+
                 SingleChoiceSegmentedButtonRow(
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp)
                 ) {
@@ -169,12 +182,21 @@ fun FilterRuleEditContent(
                 }
                 Spacer(modifier = Modifier.height(16.dp))
 
-                Subtitle(
-                    text = stringResource(R.string.filter_rule_condition_pattern),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                )
                 Text(
-                    text = stringResource(R.string.filter_rule_simple_mode_hint),
+                    text =
+                        stringResource(
+                            if (state.action == FilterAction.BLOCK) {
+                                R.string.filter_rule_combine_block
+                            } else {
+                                R.string.filter_rule_combine_allow
+                            }
+                        ),
+                    modifier = Modifier.padding(horizontal = 20.dp),
+                    style = MaterialTheme.typography.bodySmall,
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = stringResource(R.string.filter_rule_glob_help),
                     modifier = Modifier.padding(horizontal = 20.dp),
                     style = MaterialTheme.typography.bodySmall,
                 )
@@ -228,18 +250,6 @@ private fun ConditionRow(
     onPatternChange: (String) -> Unit,
     onRemove: () -> Unit,
 ) {
-    val regexError =
-        if (
-            condition.matchType == FilterMatchType.REGEX ||
-                condition.matchType == FilterMatchType.NOT_REGEX
-        ) {
-            runCatching { Regex(condition.pattern) }
-                .exceptionOrNull()
-                ?.let { stringResource(R.string.filter_regex_invalid) }
-        } else {
-            null
-        }
-
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             FieldDropdown(
@@ -273,19 +283,6 @@ private fun ConditionRow(
             modifier = Modifier.fillMaxWidth(),
             singleLine = true,
             label = { Text(text = stringResource(R.string.filter_rule_condition_pattern)) },
-            isError = regexError != null,
-            supportingText = {
-                if (regexError != null) {
-                    Text(text = regexError)
-                } else if (condition.field == FilterField.URL &&
-                    condition.matchType == FilterMatchType.WORD_MATCH
-                ) {
-                    Text(
-                        text = stringResource(R.string.filter_word_match_url_hint),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-            },
         )
     }
 }
@@ -332,13 +329,27 @@ private fun FieldDropdown(
     onSelect: (FilterField) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // URL is legacy-only (old rules still evaluate); the editor offers
+    // title, author, content and the combined all-fields scope.
+    val visible =
+        remember(selected) {
+            val base =
+                listOf(
+                    FilterField.ALL,
+                    FilterField.TITLE,
+                    FilterField.AUTHOR,
+                    FilterField.CONTENT,
+                )
+            if (selected == FilterField.URL) base + FilterField.URL else base
+        }
     EnumDropdown(
-        options = FilterField.entries.toList(),
+        options = visible,
         selected = selected,
         onSelect = onSelect,
         label = {
             stringResource(
                 when (it) {
+                    FilterField.ALL -> R.string.filter_field_all
                     FilterField.TITLE -> R.string.filter_field_title
                     FilterField.AUTHOR -> R.string.filter_field_author
                     FilterField.URL -> R.string.filter_field_url
@@ -356,13 +367,25 @@ private fun MatchTypeDropdown(
     onSelect: (FilterMatchType) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Glob-only UI; legacy types map onto glob when an old rule is loaded.
+    val visible =
+        remember(selected) {
+            val base = listOf(FilterMatchType.GLOB, FilterMatchType.NOT_GLOB)
+            if (selected == FilterMatchType.GLOB || selected == FilterMatchType.NOT_GLOB) {
+                base
+            } else {
+                base + selected
+            }
+        }
     EnumDropdown(
-        options = FilterMatchType.entries.toList(),
+        options = visible,
         selected = selected,
         onSelect = onSelect,
         label = {
             stringResource(
                 when (it) {
+                    FilterMatchType.GLOB -> R.string.filter_match_type_glob
+                    FilterMatchType.NOT_GLOB -> R.string.filter_match_type_not_glob
                     FilterMatchType.CONTAINS -> R.string.filter_match_type_contains
                     FilterMatchType.NOT_CONTAINS -> R.string.filter_match_type_not_contains
                     FilterMatchType.WORD_MATCH -> R.string.filter_match_type_word_match
@@ -373,6 +396,56 @@ private fun MatchTypeDropdown(
         },
         modifier = modifier,
     )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun FeedScopeDropdown(
+    feeds: List<Feed>,
+    selectedFeedId: String?,
+    onSelect: (String?) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedLabel =
+        if (selectedFeedId == null) {
+            stringResource(R.string.filter_rule_scope_global)
+        } else {
+            feeds.firstOrNull { it.id == selectedFeedId }?.name
+                ?: stringResource(R.string.filter_rule_scope_global)
+        }
+    ExposedDropdownMenuBox(
+        expanded = expanded,
+        onExpandedChange = { expanded = it },
+        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp),
+    ) {
+        OutlinedTextField(
+            value = selectedLabel,
+            onValueChange = {},
+            readOnly = true,
+            singleLine = true,
+            label = { Text(text = stringResource(R.string.filter_rule_scope)) },
+            modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth(),
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(text = stringResource(R.string.filter_rule_scope_global)) },
+                onClick = {
+                    expanded = false
+                    onSelect(null)
+                },
+            )
+            feeds.forEach { feed ->
+                DropdownMenuItem(
+                    text = { Text(text = feed.name) },
+                    onClick = {
+                        expanded = false
+                        onSelect(feed.id)
+                    },
+                )
+            }
+        }
+    }
 }
 
 @Composable

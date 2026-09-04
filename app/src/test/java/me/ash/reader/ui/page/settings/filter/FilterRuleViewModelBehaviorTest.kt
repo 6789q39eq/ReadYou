@@ -16,6 +16,7 @@ import me.ash.reader.domain.model.filter.FilterMatchType
 import me.ash.reader.domain.model.filter.FilterRule
 import me.ash.reader.domain.model.filter.toFilterExpressionOrNull
 import me.ash.reader.domain.model.filter.toJson
+import me.ash.reader.domain.repository.FeedDao
 import me.ash.reader.domain.repository.FilterRuleDao
 import me.ash.reader.domain.service.AccountService
 import org.junit.After
@@ -47,6 +48,7 @@ class FilterRuleViewModelBehaviorTest {
     private val testDispatcher = StandardTestDispatcher()
     private val accountId = 7
     private lateinit var dao: FilterRuleDao
+    private lateinit var feedDao: FeedDao
     private lateinit var accountService: AccountService
     private val viewModels = mutableListOf<FilterRuleViewModel>()
 
@@ -54,6 +56,7 @@ class FilterRuleViewModelBehaviorTest {
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
         dao = Mockito.mock(FilterRuleDao::class.java)
+        feedDao = Mockito.mock(FeedDao::class.java)
         accountService = Mockito.mock(AccountService::class.java)
         Mockito.`when`(accountService.getCurrentAccountId()).thenReturn(accountId)
     }
@@ -68,7 +71,7 @@ class FilterRuleViewModelBehaviorTest {
     }
 
     private fun newViewModel(): FilterRuleViewModel {
-        val vm = FilterRuleViewModel(dao, accountService, testDispatcher)
+        val vm = FilterRuleViewModel(dao, feedDao, accountService, testDispatcher)
         viewModels.add(vm)
         return vm
     }
@@ -91,7 +94,7 @@ class FilterRuleViewModelBehaviorTest {
     ): FilterRule {
         val expression =
             FilterExpression.Condition(
-                FilterCondition(FilterField.TITLE, FilterMatchType.CONTAINS, pattern)
+                FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, pattern)
             )
         return FilterRule(
             id = id,
@@ -116,8 +119,8 @@ class FilterRuleViewModelBehaviorTest {
         assertEquals(FilterAction.BLOCK, state.action)
         assertEquals(1, state.conditions.size)
         val condition = state.conditions.single()
-        assertEquals(FilterField.TITLE, condition.field)
-        assertEquals(FilterMatchType.CONTAINS, condition.matchType)
+        assertEquals(FilterField.ALL, condition.field)
+        assertEquals(FilterMatchType.GLOB, condition.matchType)
         assertEquals("", condition.pattern)
         assertTrue("new rules must start enabled", state.editingIsEnabled)
     }

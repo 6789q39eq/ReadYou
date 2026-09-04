@@ -36,6 +36,7 @@ fun FilterBar(
     filterBarFilled: Boolean,
     filterBarPadding: Dp,
     filterBarTonalElevation: Dp,
+    middleLabel: String? = null,
     filterOnClick: (Filter) -> Unit = {},
 ) {
     val view = LocalView.current
@@ -91,7 +92,7 @@ fun FilterBar(
                     } else {
                         {
                             Text(
-                                text = item.toName(),
+                                text = if (item.isUnread() && middleLabel != null) middleLabel else item.toName(),
 //                            style = MaterialTheme.typography.labelLarge,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,

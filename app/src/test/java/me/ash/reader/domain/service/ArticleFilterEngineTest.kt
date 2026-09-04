@@ -177,6 +177,66 @@ class ArticleFilterEngineTest {
         assertTrue(ArticleFilterEngine.matchesCondition(article, hit))
     }
 
+    @Test
+    fun `glob star matches any sequence case-insensitively`() {
+        val plain = FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "kotlin")
+        assertTrue(ArticleFilterEngine.matchesCondition(article, plain))
+        val starred = FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "*KOTLIN*")
+        assertTrue(ArticleFilterEngine.matchesCondition(article, starred))
+        val miss = FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "rust")
+        assertFalse(ArticleFilterEngine.matchesCondition(article, miss))
+    }
+
+    @Test
+    fun `glob question and class and braces work`() {
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                article,
+                FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "Kotl?n"),
+            )
+        )
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                article,
+                FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "[Kk]otlin"),
+            )
+        )
+        assertTrue(
+            ArticleFilterEngine.matchesCondition(
+                article,
+                FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "{Kotlin,Swift}"),
+            )
+        )
+        assertFalse(
+            ArticleFilterEngine.matchesCondition(
+                article,
+                FilterCondition(FilterField.TITLE, FilterMatchType.GLOB, "Kotl?n!"),
+            )
+        )
+    }
+
+    @Test
+    fun `not_glob inverts glob`() {
+        val hit = FilterCondition(FilterField.TITLE, FilterMatchType.NOT_GLOB, "kotlin")
+        val miss = FilterCondition(FilterField.TITLE, FilterMatchType.NOT_GLOB, "rust")
+        assertFalse(ArticleFilterEngine.matchesCondition(article, hit))
+        assertTrue(ArticleFilterEngine.matchesCondition(article, miss))
+    }
+
+    @Test
+    fun `all fields scope matches any of title author content`() {
+        val byAuthor = FilterCondition(FilterField.ALL, FilterMatchType.GLOB, "jane*")
+        assertTrue(ArticleFilterEngine.matchesCondition(article, byAuthor))
+        val byContent = FilterCondition(FilterField.ALL, FilterMatchType.GLOB, "*K2 compiler*")
+        assertTrue(ArticleFilterEngine.matchesCondition(article, byContent))
+        val miss = FilterCondition(FilterField.ALL, FilterMatchType.GLOB, "rust")
+        assertFalse(ArticleFilterEngine.matchesCondition(article, miss))
+        val notGlobMiss = FilterCondition(FilterField.ALL, FilterMatchType.NOT_GLOB, "rust")
+        assertTrue(ArticleFilterEngine.matchesCondition(article, notGlobMiss))
+        val notGlobHit = FilterCondition(FilterField.ALL, FilterMatchType.NOT_GLOB, "kotlin")
+        assertFalse(ArticleFilterEngine.matchesCondition(article, notGlobHit))
+    }
+
     // --- resilience ----------------------------------------------------------
 
     @Test

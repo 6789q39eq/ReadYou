@@ -719,12 +719,12 @@ fun FlowPage(
             bottomBar = {
                 androidx.compose.foundation.layout.Column {
                     // Pills above the middle tab for inline rule toggling.
-                    // Only show when there are filter rules to choose from;
-                    // otherwise the middle view defaults to "Unread".
-                    if (filterUiState.filter.isUnread() && pillRules.any { it.isEnabled }) {
+                    // Only show when at least one filter rule exists; the
+                    // middle view itself defaults to "Unread".
+                    if (filterUiState.filter.isUnread() && pillRules.isNotEmpty()) {
                         FilterPillsRow(
                             filterState = pillFilterState,
-                            rules = pillRules.filter { it.isEnabled },
+                            rules = pillRules,
                             onToggleUnread = { filterSelectionViewModel.setUnreadOnly(it) },
                             onToggleRule = { id, selected ->
                                 filterSelectionViewModel.toggleRule(id, selected)

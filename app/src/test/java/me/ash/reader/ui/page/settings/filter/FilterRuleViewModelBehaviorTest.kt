@@ -137,7 +137,6 @@ class FilterRuleViewModelBehaviorTest {
 
             val state = viewModel.uiState.value
             assertEquals(stored.id, state.editingRuleId)
-            assertEquals("Block spam", state.name)
             assertEquals(FilterAction.BLOCK, state.action)
             assertEquals(1, state.conditions.size)
             assertEquals("spam", state.conditions.single().pattern)
@@ -171,29 +170,25 @@ class FilterRuleViewModelBehaviorTest {
 
         val state = viewModel.uiState.value
         assertEquals("second", state.editingRuleId)
-        assertEquals("second", state.name)
         assertEquals("b", state.conditions.single().pattern)
     }
 
     @Test
-    fun `updateName, updateAction and addCondition mutate the state`() =
-        runTest(testDispatcher) {
-            val viewModel = newViewModel()
-            viewModel.startEditing(null)
-            advanceUntilIdle()
+    fun `updateAction and addCondition mutate the state`() = runTest(testDispatcher) {
+        val viewModel = newViewModel()
+        viewModel.startEditing(null)
+        advanceUntilIdle()
 
-            viewModel.updateName("My rule")
-            viewModel.updateAction(FilterAction.ALLOW)
-            viewModel.updateCondition(0, EditableCondition(pattern = "kotlin"))
-            viewModel.addCondition()
+        viewModel.updateAction(FilterAction.ALLOW)
+        viewModel.updateCondition(0, EditableCondition(pattern = "kotlin"))
+        viewModel.addCondition()
 
-            val state = viewModel.uiState.value
-            assertEquals("My rule", state.name)
-            assertEquals(FilterAction.ALLOW, state.action)
-            assertEquals(2, state.conditions.size)
-            assertEquals("kotlin", state.conditions[0].pattern)
-            assertEquals("", state.conditions[1].pattern)
-        }
+        val state = viewModel.uiState.value
+        assertEquals(FilterAction.ALLOW, state.action)
+        assertEquals(2, state.conditions.size)
+        assertEquals("kotlin", state.conditions[0].pattern)
+        assertEquals("", state.conditions[1].pattern)
+    }
 
     @Test
     fun `removeCondition refuses to drop the last condition`() = runTest(testDispatcher) {
@@ -221,27 +216,11 @@ class FilterRuleViewModelBehaviorTest {
     }
 
     @Test
-    fun `save with empty name returns false and does not touch the dao`() =
-        runTest(testDispatcher) {
-            val viewModel = newViewModel()
-            viewModel.startEditing(null)
-            advanceUntilIdle()
-            viewModel.updateCondition(0, EditableCondition(pattern = "anything"))
-
-            val saved = viewModel.save()
-            advanceUntilIdle()
-
-            assertFalse(saved)
-            verify(dao, never()).upsert()
-        }
-
-    @Test
     fun `save with empty pattern returns false and does not touch the dao`() =
         runTest(testDispatcher) {
             val viewModel = newViewModel()
             viewModel.startEditing(null)
             advanceUntilIdle()
-            viewModel.updateName("Has name")
 
             val saved = viewModel.save()
             advanceUntilIdle()
@@ -269,7 +248,6 @@ class FilterRuleViewModelBehaviorTest {
 
             viewModel.startEditing(null)
             advanceUntilIdle()
-            viewModel.updateName("Block spam")
             viewModel.updateAction(FilterAction.BLOCK)
             viewModel.updateCondition(0, EditableCondition(pattern = "spam"))
             viewModel.addCondition()
@@ -285,7 +263,7 @@ class FilterRuleViewModelBehaviorTest {
             val persisted = saved.single()
             assertEquals(accountId, persisted.accountId)
             assertNull("global rule has no feed", persisted.feedId)
-            assertEquals("Block spam", persisted.name)
+            assertEquals("spam, evil", persisted.name)
             assertEquals(FilterAction.BLOCK, persisted.action)
             assertTrue("new rules must be enabled", persisted.isEnabled)
 
@@ -311,7 +289,6 @@ class FilterRuleViewModelBehaviorTest {
 
             viewModel.startEditing(null)
             advanceUntilIdle()
-            viewModel.updateName("Allow kotlin")
             viewModel.updateAction(FilterAction.ALLOW)
             viewModel.updateCondition(0, EditableCondition(pattern = "kotlin"))
             viewModel.addCondition()
@@ -354,7 +331,6 @@ class FilterRuleViewModelBehaviorTest {
             val viewModel = newViewModel()
             viewModel.startEditing(stored.id)
             advanceUntilIdle()
-            viewModel.updateName("new name")
             viewModel.updateCondition(0, EditableCondition(pattern = "new"))
 
             assertTrue(viewModel.save())
@@ -364,7 +340,7 @@ class FilterRuleViewModelBehaviorTest {
             val persisted = saved.single()
             assertEquals("rule-42", persisted.id)
             assertEquals("feed-9", persisted.feedId)
-            assertEquals("new name", persisted.name)
+            assertEquals("new", persisted.name)
             assertFalse("enablement must round-trip", persisted.isEnabled)
         }
 

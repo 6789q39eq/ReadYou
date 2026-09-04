@@ -72,7 +72,6 @@ constructor(
                         FilterRuleUiState(
                             editingRuleId = null,
                             feedId = feedId,
-                            name = "",
                             action = FilterAction.BLOCK,
                             conditions =
                                 listOf(
@@ -97,7 +96,6 @@ constructor(
                         FilterRuleUiState(
                             editingRuleId = rule.id,
                             feedId = rule.feedId,
-                            name = rule.name,
                             action = rule.action,
                             conditions = conditions,
                             originalExpressionJson = rule.expressionJson,
@@ -117,8 +115,6 @@ constructor(
 
     fun acknowledgeAdvancedRuleWarning() =
         _uiState.update { it.copy(isAdvancedRule = false) }
-
-    fun updateName(name: String) = _uiState.update { it.copy(name = name) }
 
     fun updateAction(action: FilterAction) = _uiState.update { it.copy(action = action) }
 
@@ -158,14 +154,13 @@ constructor(
      * Persists the rule currently being edited. Suspends until the IO load
      * for an existing rule has completed, so the user never sees the default
      * empty state right after opening an existing rule. Returns false when
-     * the input is incomplete (no name or no non-blank pattern).
+     * the input is incomplete (no non-blank pattern).
      */
     suspend fun save(): Boolean {
         awaitLoaded()
         val state = _uiState.value
-        val name = state.name.trim()
         val patterns = state.conditions.map { it.pattern.trim() }.filter { it.isNotEmpty() }
-        if (name.isEmpty() || patterns.isEmpty()) return false
+        if (patterns.isEmpty()) return false
 
         val accountId = accountService.getCurrentAccountId()
         val conditions =
@@ -184,6 +179,8 @@ constructor(
         // enabled with the current timestamp.
         val isEnabled = if (state.editingRuleId == null) true else state.editingIsEnabled
         val createdAt = state.editingCreatedAt ?: System.currentTimeMillis()
+        // The pattern string identifies the rule in the settings list.
+        val name = patterns.joinToString(", ")
 
         return withContext(ioDispatcher) {
             filterRuleDao.upsert(
@@ -224,7 +221,6 @@ data class FilterRuleUiState(
     val editingRuleId: String? = null,
     /** null ⇒ global (account-level) rule. */
     val feedId: String? = null,
-    val name: String = "",
     val action: FilterAction = FilterAction.BLOCK,
     val conditions: List<EditableCondition> = listOf(EditableCondition()),
     /**

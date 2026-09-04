@@ -114,32 +114,10 @@ fun FilterRuleEditContent(
         },
         content = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
-                OutlinedTextField(
-                    value = state.name,
-                    onValueChange = viewModel::updateName,
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                    singleLine = true,
-                    label = { Text(text = stringResource(R.string.filter_rule_name)) },
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
                 FeedScopeDropdown(
                     feeds = feeds,
                     selectedFeedId = state.feedId,
                     onSelect = viewModel::updateFeedId,
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text =
-                        stringResource(
-                            if (state.feedId == null) {
-                                R.string.filter_rule_scope_global_desc
-                            } else {
-                                R.string.filter_rule_scope_feed_desc
-                            }
-                        ),
-                    modifier = Modifier.padding(horizontal = 20.dp),
-                    style = MaterialTheme.typography.bodySmall,
                 )
                 Spacer(modifier = Modifier.height(16.dp))
 

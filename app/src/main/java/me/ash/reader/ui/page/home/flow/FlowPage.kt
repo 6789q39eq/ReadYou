@@ -499,7 +499,9 @@ fun FlowPage(
                     sharedXAxisTransitionSlow(direction = Direction.Forward)
                 AnimatedContent(
                     targetState = flowUiState,
-                    contentKey = { it.pagerData.filterState.copy(searchContent = null) },
+                    // Recreate the paging collector when filter rules produce
+                    // a new Pager, even if the visible tab/feed is unchanged.
+                    contentKey = { it.pagerData.pager },
                     transitionSpec = {
                         val targetFilter = targetState.pagerData.filterState
                         val initialFilter = initialState.pagerData.filterState

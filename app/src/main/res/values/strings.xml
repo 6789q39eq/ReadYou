@@ -424,14 +424,6 @@
     <string name="filter_match_type_regex">regex</string>
     <string name="filter_match_type_not_regex">not regex</string>
     <string name="filter_regex_invalid">Invalid pattern</string>
-    <string name="filter_regex_test_title">Test pattern</string>
-    <string name="filter_regex_test_sample">Sample title or content</string>
-    <string name="filter_regex_test_author">Sample author</string>
-    <string name="filter_regex_test_link">Sample link</string>
-    <string name="filter_regex_test_yes">yes</string>
-    <string name="filter_regex_test_no">no</string>
-    <string name="filter_regex_test_summary_block">%1$d of %2$d conditions match (Block rule: any match drops the article).</string>
-    <string name="filter_regex_test_summary_allow">%1$d of %2$d conditions match (Allow rule: all conditions must match).</string>
     <string name="filter_rule_advanced_warning_title">Advanced rule detected</string>
     <string name="filter_rule_advanced_warning_body">This rule was originally a grouped expression. Editing it in simple mode will replace the grouping with a flat list of conditions. The new structure will be OR\'d for Block rules and AND\'d for Allow rules.</string>
     <string name="filter_rule_advanced_warning_dismiss">Got it</string>

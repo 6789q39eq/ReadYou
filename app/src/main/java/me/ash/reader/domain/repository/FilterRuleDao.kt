@@ -38,6 +38,15 @@ interface FilterRuleDao {
         feedId: String,
     ): List<FilterRule>
 
+    @Query(
+        """
+        SELECT * FROM filter_rule
+        WHERE accountId = :accountId AND isEnabled = 1
+        ORDER BY createdAt ASC
+        """
+    )
+    suspend fun findEnabledForAccount(accountId: Int): List<FilterRule>
+
     @Query("SELECT * FROM filter_rule WHERE id = :id")
     suspend fun findById(id: String): FilterRule?
 

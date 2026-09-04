@@ -602,12 +602,10 @@ constructor(
                     unreadIds = remoteUnreadIds.await(),
                     starredIds = remoteStarredIds.await(),
                 )
-            // Non-destructive: keep every fetched article so the All tab
-            // stays unfiltered. Rules are view-time filters in the middle
-            // tab, never sync-time drops.
-            val items = fetched
-            val dropped: List<me.ash.reader.domain.model.article.Article> = emptyList()
-            val filteredIds: Set<String> = emptySet()
+            // Dropped articles are stored as read so they do not re-enter
+            // unread counts or notifications and are not fetched repeatedly.
+            val (items, dropped) = applyFeedFilters.partition(accountId, feedId, fetched)
+            val filteredIds = dropped.map { it.id.remoteId }.toSet()
 
             if (feed.isNotification) {
                 val articlesToNotify = items.fastFilter { it.isUnread }

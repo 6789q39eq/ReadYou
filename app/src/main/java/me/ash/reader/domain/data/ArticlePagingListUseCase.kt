@@ -81,21 +81,11 @@ constructor(
                 }
                 .collect { filterState ->
                     val searchContent = filterState.searchContent
-                    // Middle tab (Unread) doubles as the filtered view:
-                    // - unread pseudo-rule controls unread-only vs read+unread
-                    // - selected user rules apply as a view-time filter.
-                    // All (right) shows everything unfiltered, Starred (left)
-                    // is unchanged and ignores rules.
                     val isMiddle = filterState.filter.isUnread()
                     val effectiveUnread =
                         if (isMiddle) filterState.unreadOnlyInFiltered
                         else filterState.filter.isUnread()
-                    val viewRules: List<CompiledFilterRule> =
-                        if (isMiddle && filterState.appliedRuleIds.isNotEmpty()) {
-                            loadSelectedRules(filterState.appliedRuleIds)
-                        } else {
-                            emptyList()
-                        }
+                    val enabledRules = loadEnabledRules(accountService.getCurrentAccountId())
 
                     mutablePagerFlow.value =
                         PagerData(
@@ -132,7 +122,7 @@ constructor(
                                 .flow
                                 .map { it.mapPagingFlowItem(androidStringsHelper) }
                                 .map { pagingData ->
-                                    if (viewRules.isEmpty()) pagingData
+                                    if (enabledRules.isEmpty) pagingData
                                     else {
                                         pagingData.filter { item ->
                                             if (item is ArticleFlowItem.Article) {
@@ -144,7 +134,7 @@ constructor(
                                                         link = a.link,
                                                         content = a.shortDescription,
                                                     ),
-                                                    viewRules,
+                                                    enabledRules.forFeed(a.feedId),
                                                 )
                                             } else {
                                                 true
@@ -164,21 +154,31 @@ constructor(
         }
     }
 
-    /**
-     * Loads the user-selected rules for the middle-tab view filter.
-     * Only enabled rules apply; invalid expressions are skipped so a bad
-     * rule can never empty the list. Runs on the caller's IO context.
-     */
-    private suspend fun loadSelectedRules(ruleIds: Set<String>): List<CompiledFilterRule> {
-        if (ruleIds.isEmpty()) return emptyList()
-        val compiled = ArrayList<CompiledFilterRule>(ruleIds.size)
-        for (id in ruleIds) {
-            val rule = runCatching { filterRuleDao.findById(id) }.getOrNull() ?: continue
-            if (!rule.isEnabled) continue
-            val expression = rule.expressionJson.toFilterExpressionOrNull() ?: continue
-            compiled += CompiledFilterRule(id = rule.id, action = rule.action, expression = expression)
+    private suspend fun loadEnabledRules(accountId: Int): EnabledRules {
+        val rules = filterRuleDao.findEnabledForAccount(accountId)
+        val compiled = rules.mapNotNull { rule ->
+            rule.expressionJson.toFilterExpressionOrNull()?.let { expression ->
+                CompiledFilterRule(id = rule.id, action = rule.action, expression = expression) to
+                    rule.feedId
+            }
         }
-        return compiled
+        val global = compiled.filter { it.second == null }.map { it.first }
+        val perFeed =
+            compiled
+                .mapNotNull { (rule, feedId) -> feedId?.let { it to rule } }
+                .groupBy({ it.first }, { it.second })
+        return EnabledRules(global, perFeed)
+    }
+
+    private data class EnabledRules(
+        val global: List<CompiledFilterRule>,
+        val perFeed: Map<String, List<CompiledFilterRule>>,
+    ) {
+        val isEmpty: Boolean
+            get() = global.isEmpty() && perFeed.isEmpty()
+
+        fun forFeed(feedId: String): List<CompiledFilterRule> =
+            global + perFeed[feedId].orEmpty()
     }
 }
 

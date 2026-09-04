@@ -252,10 +252,11 @@ constructor(
                             isStarred = (item.is_saved ?: 0) > 0,
                             updateAt = preDate,
                         )
+                    }.let { articles ->
+                        // A batch may mix feeds; rules apply per feed while
+                        // preserving the remote response order.
+                        applyFeedFilters.filterMixedFeeds(accountId, articles) { it.feedId }
                     }
-                    // Non-destructive: keep every fetched article so the All
-                    // tab stays unfiltered. Rules are view-time filters in
-                    // the middle tab, never sync-time drops.
 
                 allArticles.addAll(articlesFromBatch)
 

@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Delete
-import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -48,7 +47,6 @@ import me.ash.reader.domain.model.filter.FilterField
 import me.ash.reader.domain.model.filter.FilterMatchType
 import me.ash.reader.domain.service.ArticleFilterEngine
 import me.ash.reader.ui.component.base.FeedbackIconButton
-import me.ash.reader.ui.component.base.RYDialog
 import me.ash.reader.ui.component.base.RYScaffold
 import me.ash.reader.ui.ext.showToast
 
@@ -70,7 +68,6 @@ fun FilterRuleEditContent(
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val feeds by viewModel.availableFeeds.collectAsStateWithLifecycle()
-    var showTestDialog by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
 
@@ -83,13 +80,6 @@ fun FilterRuleEditContent(
                 tint = MaterialTheme.colorScheme.onSurface,
                 onClick = onBack,
             )
-        },
-        actions = {
-            FeedbackIconButton(
-                imageVector = Icons.Outlined.PlayArrow,
-                contentDescription = stringResource(R.string.filter_regex_test_title),
-                tint = MaterialTheme.colorScheme.onSurface,
-            ) { showTestDialog = true }
         },
         bottomBar = {
             Row(
@@ -202,13 +192,6 @@ fun FilterRuleEditContent(
         },
     )
 
-    if (showTestDialog) {
-        RegexTestDialog(
-            action = state.action,
-            conditions = state.conditions,
-            onDismiss = { showTestDialog = false },
-        )
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
